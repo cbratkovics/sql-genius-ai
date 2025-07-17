@@ -1,0 +1,31 @@
+company_name,segment,monthly_spend_usd,region,industry,campaign_type,conversion_rate,employees
+Apple,Enterprise,850000,West,Technology,Brand Awareness,3.2,161000
+Google,Enterprise,920000,West,Technology,Performance,4.1,190000
+Microsoft,Enterprise,780000,West,Technology,Brand Awareness,2.9,221000
+Amazon,Enterprise,1100000,West,E-commerce,Performance,5.3,1540000
+Meta,Enterprise,670000,West,Technology,Social Media,3.8,86000
+Tesla,Mid-Market,180000,West,Automotive,Brand Awareness,2.1,140000
+Netflix,Mid-Market,240000,West,Entertainment,Performance,4.7,12000
+Spotify,Mid-Market,95000,West,Entertainment,Social Media,3.4,9000
+Airbnb,Mid-Market,150000,West,Travel,Performance,3.9,6000
+Uber,Mid-Market,200000,West,Transportation,Performance,2.8,32000
+Walmart,Enterprise,450000,South,Retail,Performance,1.9,2300000
+Target,Mid-Market,125000,Central,Retail,Brand Awareness,2.3,450000
+Home Depot,Mid-Market,180000,South,Retail,Performance,3.1,500000
+Costco,Mid-Market,95000,West,Retail,Performance,2.7,310000
+Nike,Mid-Market,320000,West,Apparel,Brand Awareness,4.2,79000
+Adidas,Mid-Market,180000,East,Apparel,Social Media,3.6,62000
+Coca-Cola,Enterprise,580000,South,Beverage,Brand Awareness,2.4,86000
+PepsiCo,Enterprise,520000,East,Beverage,Brand Awareness,2.1,315000
+Starbucks,Mid-Market,240000,West,Food & Beverage,Social Media,3.8,383000
+McDonald's,Enterprise,420000,Central,Food & Beverage,Performance,2.6,200000
+JPMorgan Chase,Enterprise,680000,East,Financial,Brand Awareness,1.8,295000
+Bank of America,Enterprise,590000,East,Financial,Performance,2.2,217000
+Wells Fargo,Mid-Market,280000,West,Financial,Brand Awareness,1.9,238000
+Goldman Sachs,Mid-Market,150000,East,Financial,Performance,2.4,49000
+Salesforce,Mid-Market,180000,West,Software,Performance,4.8,79000
+Adobe,Mid-Market,220000,West,Software,Brand Awareness,4.3,29000
+Zoom,Small Business,45000,West,Software,Performance,5.1,8000
+Slack,Small Business,35000,West,Software,Social Media,4.6,2500
+Dropbox,Small Business,28000,West,Software,Performance,3.9,3000
+HubSpot,Small Business,55000,East,Software,Performance,4.4,7000
