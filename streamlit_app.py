@@ -506,7 +506,7 @@ def create_visualizations(df, query_type="auto"):
         )
         
         fig_ranking = apply_standard_formatting(fig_ranking, f"🚀 Top Performers: {primary_metric.replace('_', ' ').title()}")
-        fig_ranking.update_xaxis(tickangle=45)
+        fig_ranking.update_layout(xaxis=dict(tickangle=45))
         fig_ranking.update_layout(showlegend=False)
         
         charts.append(("🚀 Performance Ranking", fig_ranking))
