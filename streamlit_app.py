@@ -4,9 +4,11 @@ import sqlite3
 import anthropic
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from io import StringIO
 import tempfile
 import os
+import numpy as np
 
 # Page config
 st.set_page_config(
@@ -207,140 +209,304 @@ def execute_sql_on_dataframe(df, sql_query, table_name="data"):
         return None
 
 def create_visualizations(df, query_type="auto"):
-    """Auto-generate compelling business visualizations"""
+    """Create comprehensive business intelligence visualizations"""
     charts = []
     
     if df.empty:
         return charts
     
-    # Detect numeric columns
+    # Detect numeric and categorical columns
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
     categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
     
-    # Chart 1: Enhanced Bar Chart with gradient colors and business styling
-    if len(categorical_cols) > 0 and len(numeric_cols) > 0:
-        cat_col = categorical_cols[0]
-        num_col = numeric_cols[0]
-        
-        if len(df[cat_col].unique()) <= 20:
-            # Create professional gradient bar chart
-            fig = px.bar(
-                df.head(10), 
-                x=cat_col, 
-                y=num_col,
-                title=f"📊 {num_col.replace('_', ' ').title()} by {cat_col.replace('_', ' ').title()}",
-                color=num_col,
-                color_continuous_scale=['#667eea', '#764ba2', '#f093fb']
-            )
-            
-            # Professional styling
-            fig.update_layout(
-                title_font_size=20,
-                title_x=0.5,
-                font=dict(family="Arial", size=12),
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                showlegend=False
-            )
-            
-            # Add value labels on bars
-            fig.update_traces(
-                texttemplate='%{y:,.0f}',
-                textposition='outside',
-                marker_line_color='white',
-                marker_line_width=2
-            )
-            
-            fig.update_xaxes(tickangle=45)
-            charts.append(("📊 Performance Analysis", fig))
+    # Remove any ID-like columns from numeric analysis
+    numeric_cols = [col for col in numeric_cols if not any(x in col.lower() for x in ['id', 'index', 'rank'])]
     
-    # Chart 2: KPI Dashboard Style
+    if len(numeric_cols) == 0:
+        return charts
+    
+    # 1. COMPREHENSIVE KPI DASHBOARD
+    if len(numeric_cols) >= 1:
+        # Create multi-metric KPI dashboard
+        fig = make_subplots(
+            rows=2, cols=min(3, len(numeric_cols)),
+            subplot_titles=[f"{col.replace('_', ' ').title()}" for col in numeric_cols[:6]],
+            specs=[[{"type": "indicator"}] * min(3, len(numeric_cols))] * 2,
+            vertical_spacing=0.3
+        )
+        
+        # Add KPI indicators for up to 6 metrics
+        positions = [(1,1), (1,2), (1,3), (2,1), (2,2), (2,3)]
+        
+        for i, col in enumerate(numeric_cols[:6]):
+            if i < len(positions):
+                row, col_pos = positions[i]
+                
+                total_val = df[col].sum()
+                avg_val = df[col].mean()
+                max_val = df[col].max()
+                
+                # Calculate delta (performance vs average)
+                delta_val = total_val - (avg_val * len(df)) if avg_val > 0 else 0
+                
+                fig.add_trace(
+                    go.Indicator(
+                        mode="number+delta+gauge",
+                        value=total_val,
+                        delta={
+                            'reference': avg_val * len(df),
+                            'relative': True,
+                            'valueformat': '.1%'
+                        },
+                        title={"text": f"Total {col.replace('_', ' ').title()}"},
+                        number={'font': {'size': 24}},
+                        gauge={
+                            'axis': {'range': [0, max_val * 1.2]},
+                            'bar': {'color': "#667eea"},
+                            'bgcolor': "white",
+                            'bordercolor': "gray",
+                            'steps': [
+                                {'range': [0, avg_val], 'color': '#f0f0f0'},
+                                {'range': [avg_val, max_val], 'color': '#e0e0e0'}
+                            ],
+                            'threshold': {
+                                'line': {'color': "red", 'width': 4},
+                                'thickness': 0.75,
+                                'value': avg_val
+                            }
+                        }
+                    ),
+                    row=row, col=col_pos
+                )
+        
+        fig.update_layout(
+            title={
+                'text': "🎯 Executive KPI Dashboard",
+                'x': 0.5,
+                'font': {'size': 20}
+            },
+            height=500,
+            font=dict(family="Arial", size=12)
+        )
+        
+        charts.append(("🎯 Executive KPI Dashboard", fig))
+    
+    # 2. PERFORMANCE CORRELATION ANALYSIS
     if len(numeric_cols) >= 2:
-        # Create a KPI-style dashboard
-        total_value = df[numeric_cols[0]].sum()
-        avg_value = df[numeric_cols[0]].mean()
-        max_value = df[numeric_cols[0]].max()
+        # Create correlation matrix and scatter plot
+        correlation_data = df[numeric_cols].corr()
         
-        fig = go.Figure()
-        
-        # Add KPI indicators
-        fig.add_trace(go.Indicator(
-            mode = "number+delta",
-            value = total_value,
-            title = {"text": f"Total {numeric_cols[0].replace('_', ' ').title()}"},
-            delta = {'reference': avg_value * len(df)},
-            number = {'font': {'size': 40}},
-            domain = {'row': 0, 'column': 0}
-        ))
-        
-        fig.update_layout(
-            grid = {'rows': 1, 'columns': 1, 'pattern': "independent"},
-            title=f"🎯 Key Performance Indicators",
-            title_x=0.5,
-            height=300,
-            font=dict(family="Arial", size=14)
+        # Heatmap
+        fig_corr = px.imshow(
+            correlation_data,
+            text_auto=True,
+            aspect="auto",
+            title="📊 Performance Correlation Matrix",
+            color_continuous_scale=['#667eea', '#764ba2', '#f093fb']
         )
         
-        charts.append(("🎯 KPI Dashboard", fig))
-    
-    # Chart 3: Distribution with insights
-    if len(numeric_cols) > 0:
-        col = numeric_cols[0]
-        
-        fig = px.histogram(
-            df, 
-            x=col,
-            nbins=20,
-            title=f"📈 Distribution Analysis: {col.replace('_', ' ').title()}",
-            color_discrete_sequence=['#667eea']
-        )
-        
-        # Add mean line
-        mean_val = df[col].mean()
-        fig.add_vline(
-            x=mean_val, 
-            line_dash="dash", 
-            line_color="red",
-            annotation_text=f"Average: {mean_val:,.0f}"
-        )
-        
-        fig.update_layout(
+        fig_corr.update_layout(
             title_font_size=18,
             title_x=0.5,
+            height=400
+        )
+        
+        charts.append(("📊 Correlation Analysis", fig_corr))
+        
+        # Scatter plot for top 2 metrics
+        if len(numeric_cols) >= 2:
+            x_col = numeric_cols[0]
+            y_col = numeric_cols[1]
+            
+            fig_scatter = px.scatter(
+                df, 
+                x=x_col, 
+                y=y_col,
+                size=numeric_cols[2] if len(numeric_cols) > 2 else None,
+                color=categorical_cols[0] if len(categorical_cols) > 0 else None,
+                title=f"💎 Efficiency Analysis: {y_col.replace('_', ' ').title()} vs {x_col.replace('_', ' ').title()}",
+                trendline="ols",
+                hover_data=numeric_cols[:3]
+            )
+            
+            fig_scatter.update_layout(
+                title_font_size=18,
+                title_x=0.5,
+                height=500,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
+            )
+            
+            charts.append(("💎 Efficiency Analysis", fig_scatter))
+    
+    # 3. MARKET SEGMENTATION & PERFORMANCE
+    if len(categorical_cols) > 0 and len(numeric_cols) > 0:
+        cat_col = categorical_cols[0]
+        
+        # Market share pie chart
+        if len(df[cat_col].unique()) <= 10:
+            market_data = df.groupby(cat_col)[numeric_cols[0]].sum().reset_index()
+            
+            fig_pie = px.pie(
+                market_data,
+                values=numeric_cols[0],
+                names=cat_col,
+                title=f"🏆 Market Share Analysis by {cat_col.replace('_', ' ').title()}",
+                color_discrete_sequence=px.colors.qualitative.Set3
+            )
+            
+            fig_pie.update_traces(
+                textposition='inside',
+                textinfo='percent+label',
+                textfont_size=12
+            )
+            
+            fig_pie.update_layout(
+                title_font_size=18,
+                title_x=0.5,
+                height=500
+            )
+            
+            charts.append(("🏆 Market Share Analysis", fig_pie))
+        
+        # Performance comparison bar chart
+        comparison_data = df.groupby(cat_col)[numeric_cols[:3]].mean().reset_index()
+        
+        fig_comparison = px.bar(
+            comparison_data,
+            x=cat_col,
+            y=numeric_cols[0],
+            title=f"📈 Performance Comparison by {cat_col.replace('_', ' ').title()}",
+            color=numeric_cols[0],
+            color_continuous_scale=['#667eea', '#764ba2', '#f093fb']
+        )
+        
+        # Add average line
+        avg_line = df[numeric_cols[0]].mean()
+        fig_comparison.add_hline(
+            y=avg_line,
+            line_dash="dash",
+            line_color="red",
+            annotation_text=f"Industry Average: {avg_line:,.0f}"
+        )
+        
+        fig_comparison.update_layout(
+            title_font_size=18,
+            title_x=0.5,
+            height=500,
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)'
         )
         
-        charts.append(("📈 Distribution Insights", fig))
+        fig_comparison.update_xaxes(tickangle=45)
+        
+        charts.append(("📈 Performance Benchmarking", fig_comparison))
     
-    # Chart 4: Trend Analysis (if applicable)
-    if len(df) > 5 and len(numeric_cols) > 0:
-        df_sorted = df.sort_values(by=numeric_cols[0], ascending=False)
+    # 4. EFFICIENCY & ROI ANALYSIS
+    if len(numeric_cols) >= 2:
+        # Calculate efficiency metrics
+        df_efficiency = df.copy()
         
-        fig = px.line(
-            df_sorted.reset_index(), 
-            y=numeric_cols[0],
-            title=f"📉 Trend Analysis: {numeric_cols[0].replace('_', ' ').title()}",
-            color_discrete_sequence=['#764ba2']
+        # Create efficiency ratios
+        for i in range(len(numeric_cols)-1):
+            for j in range(i+1, len(numeric_cols)):
+                col1, col2 = numeric_cols[i], numeric_cols[j]
+                if df_efficiency[col2].sum() != 0:
+                    ratio_name = f"{col1}_per_{col2}"
+                    df_efficiency[ratio_name] = df_efficiency[col1] / df_efficiency[col2].replace(0, 1)
+        
+        # ROI-style analysis
+        efficiency_cols = [col for col in df_efficiency.columns if '_per_' in col]
+        
+        if efficiency_cols:
+            fig_efficiency = px.box(
+                df_efficiency,
+                y=efficiency_cols[0],
+                title=f"💰 ROI Distribution Analysis: {efficiency_cols[0].replace('_', ' ').title()}",
+                color_discrete_sequence=['#667eea']
+            )
+            
+            fig_efficiency.update_layout(
+                title_font_size=18,
+                title_x=0.5,
+                height=400,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
+            )
+            
+            charts.append(("💰 ROI Analysis", fig_efficiency))
+    
+    # 5. TOP PERFORMERS RANKING
+    if len(numeric_cols) > 0:
+        # Rank by primary metric
+        primary_metric = numeric_cols[0]
+        top_performers = df.nlargest(10, primary_metric)
+        
+        if len(categorical_cols) > 0:
+            label_col = categorical_cols[0]
+        else:
+            label_col = df.columns[0]  # Use first column as label
+            
+        fig_ranking = px.bar(
+            top_performers,
+            x=label_col,
+            y=primary_metric,
+            title=f"🚀 Top Performers: {primary_metric.replace('_', ' ').title()}",
+            color=primary_metric,
+            color_continuous_scale=['#667eea', '#764ba2', '#f093fb']
         )
         
-        # Add trendline
-        fig.update_traces(
-            line=dict(width=3),
-            mode='lines+markers',
-            marker=dict(size=8)
-        )
+        # Add performance tiers
+        top_tier = top_performers[primary_metric].quantile(0.8)
+        mid_tier = top_performers[primary_metric].quantile(0.6)
         
-        fig.update_layout(
+        fig_ranking.add_hline(y=top_tier, line_dash="dot", line_color="gold", annotation_text="Top Tier")
+        fig_ranking.add_hline(y=mid_tier, line_dash="dot", line_color="silver", annotation_text="Mid Tier")
+        
+        fig_ranking.update_layout(
             title_font_size=18,
             title_x=0.5,
+            height=500,
             plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            xaxis_title="Rank Order",
-            yaxis_title=numeric_cols[0].replace('_', ' ').title()
+            paper_bgcolor='rgba(0,0,0,0)'
         )
         
-        charts.append(("📉 Trend Analysis", fig))
+        fig_ranking.update_xaxes(tickangle=45)
+        
+        charts.append(("🚀 Performance Ranking", fig_ranking))
+    
+    # 6. ADVANCED DISTRIBUTION INSIGHTS
+    if len(numeric_cols) > 0:
+        primary_col = numeric_cols[0]
+        
+        # Create advanced histogram with quartiles
+        fig_dist = px.histogram(
+            df,
+            x=primary_col,
+            nbins=20,
+            title=f"📊 Advanced Distribution: {primary_col.replace('_', ' ').title()}",
+            color_discrete_sequence=['#667eea'],
+            marginal="box"  # Add box plot on top
+        )
+        
+        # Add quartile lines
+        q1 = df[primary_col].quantile(0.25)
+        q2 = df[primary_col].quantile(0.5)  # Median
+        q3 = df[primary_col].quantile(0.75)
+        
+        fig_dist.add_vline(x=q1, line_dash="dash", line_color="orange", annotation_text=f"Q1: {q1:,.0f}")
+        fig_dist.add_vline(x=q2, line_dash="dash", line_color="red", annotation_text=f"Median: {q2:,.0f}")
+        fig_dist.add_vline(x=q3, line_dash="dash", line_color="green", annotation_text=f"Q3: {q3:,.0f}")
+        
+        fig_dist.update_layout(
+            title_font_size=18,
+            title_x=0.5,
+            height=500,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
+        
+        charts.append(("📊 Distribution Analytics", fig_dist))
     
     return charts
 
@@ -673,39 +839,38 @@ def main():
                         # Display results with enhanced styling
                         st.subheader("📊 Query Results")
                         
-                        # Add key metrics at the top
+                        # Add comprehensive key metrics at the top
                         if len(result_df) > 0:
-                            col1, col2, col3, col4 = st.columns(4)
+                            numeric_cols = result_df.select_dtypes(include=['number']).columns.tolist()
+                            categorical_cols = result_df.select_dtypes(include=['object']).columns.tolist()
                             
-                            with col1:
+                            # Dynamic metrics based on available columns
+                            metric_cols = st.columns(min(5, len(numeric_cols) + 2))
+                            
+                            # Always show record count
+                            with metric_cols[0]:
                                 st.metric(
                                     label="📋 Records Found", 
                                     value=f"{len(result_df):,}",
                                     delta=f"{len(result_df)} rows"
                                 )
                             
-                            with col2:
-                                numeric_cols = result_df.select_dtypes(include=['number']).columns
-                                if len(numeric_cols) > 0:
-                                    total_val = result_df[numeric_cols[0]].sum()
-                                    st.metric(
-                                        label=f"💰 Total {numeric_cols[0].replace('_', ' ').title()}", 
-                                        value=f"${total_val:,.0f}",
-                                        delta="Business Value"
-                                    )
+                            # Show metrics for each numeric column
+                            for i, col in enumerate(numeric_cols[:4]):  # Up to 4 numeric metrics
+                                if i + 1 < len(metric_cols):
+                                    with metric_cols[i + 1]:
+                                        total_val = result_df[col].sum()
+                                        avg_val = result_df[col].mean()
+                                        
+                                        st.metric(
+                                            label=f"💰 Total {col.replace('_', ' ').title()}", 
+                                            value=f"${total_val:,.0f}" if 'spend' in col.lower() or 'revenue' in col.lower() else f"{total_val:,.0f}",
+                                            delta=f"Avg: {avg_val:,.0f}"
+                                        )
                             
-                            with col3:
-                                if len(numeric_cols) > 0:
-                                    avg_val = result_df[numeric_cols[0]].mean()
-                                    st.metric(
-                                        label=f"📊 Average {numeric_cols[0].replace('_', ' ').title()}", 
-                                        value=f"${avg_val:,.0f}",
-                                        delta="Per Record"
-                                    )
-                            
-                            with col4:
-                                categorical_cols = result_df.select_dtypes(include=['object']).columns
-                                if len(categorical_cols) > 0:
+                            # Show categorical summary if space allows
+                            if len(categorical_cols) > 0 and len(metric_cols) > len(numeric_cols) + 1:
+                                with metric_cols[-1]:
                                     unique_count = result_df[categorical_cols[0]].nunique()
                                     st.metric(
                                         label=f"🏷️ Unique {categorical_cols[0].replace('_', ' ').title()}", 
@@ -735,7 +900,7 @@ def main():
                         with col2:
                             st.info("💼 **Pro Tip**: Use exported data in Excel, PowerBI, or Tableau")
                         
-                        # Auto-generate professional visualizations
+                        # Auto-generate comprehensive professional visualizations
                         if len(result_df) > 0:
                             st.markdown("---")
                             st.subheader("📈 Business Intelligence Dashboards")
@@ -756,14 +921,22 @@ def main():
                                         })
                                         
                                         # Add business context for each chart
-                                        if "Performance" in name:
-                                            st.info("💡 **Insight**: Identify top performers and optimization opportunities")
-                                        elif "KPI" in name:
-                                            st.info("💡 **Insight**: Monitor key metrics and track performance against targets")
+                                        if "KPI" in name:
+                                            st.info("💡 **Insight**: Comprehensive performance overview with benchmarks and targets")
+                                        elif "Correlation" in name:
+                                            st.info("💡 **Insight**: Understand relationships between metrics for strategic planning")
+                                        elif "Efficiency" in name:
+                                            st.info("💡 **Insight**: ROI analysis showing performance vs investment patterns")
+                                        elif "Market Share" in name:
+                                            st.info("💡 **Insight**: Competitive positioning and market concentration analysis")
+                                        elif "Benchmarking" in name:
+                                            st.info("💡 **Insight**: Performance comparison against industry averages")
+                                        elif "ROI" in name:
+                                            st.info("💡 **Insight**: Financial efficiency and optimization opportunities")
+                                        elif "Ranking" in name:
+                                            st.info("💡 **Insight**: Top performer identification and tier analysis")
                                         elif "Distribution" in name:
-                                            st.info("💡 **Insight**: Understand data patterns and outlier detection")
-                                        elif "Trend" in name:
-                                            st.info("💡 **Insight**: Analyze performance trends and forecast opportunities")
+                                            st.info("💡 **Insight**: Statistical analysis with quartiles and outlier detection")
                             else:
                                 st.info("💡 **Visualization Note**: Upload more diverse data for advanced chart options")
                         
