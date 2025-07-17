@@ -427,7 +427,7 @@ def create_visualizations(df, query_type="auto"):
         )
         
         fig_comparison = apply_standard_formatting(fig_comparison, f"📈 Performance by {cat_col.replace('_', ' ').title()}")
-        fig_comparison.update_xaxis(tickangle=45)
+        fig_comparison.update_layout(xaxis=dict(tickangle=45))
         fig_comparison.update_layout(showlegend=False)
         
         charts.append(("📈 Performance Benchmarking", fig_comparison))
