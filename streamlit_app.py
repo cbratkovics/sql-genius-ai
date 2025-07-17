@@ -293,27 +293,40 @@ def create_visualizations(df, query_type="auto"):
     
     # 2. PERFORMANCE CORRELATION ANALYSIS
     if len(numeric_cols) >= 2:
-        # Create correlation matrix and scatter plot
+        # Create enhanced correlation matrix
         correlation_data = df[numeric_cols].corr()
         
-        # Heatmap
+        # Enhanced heatmap with better styling
         fig_corr = px.imshow(
             correlation_data,
             text_auto=True,
             aspect="auto",
-            title="📊 Performance Correlation Matrix",
-            color_continuous_scale=['#667eea', '#764ba2', '#f093fb']
+            title="<b>📊 Performance Correlation Matrix</b>",
+            color_continuous_scale='RdBu_r',
+            zmin=-1,
+            zmax=1
         )
         
         fig_corr.update_layout(
-            title_font_size=18,
+            title_font_size=20,
             title_x=0.5,
-            height=400
+            title_font_family="Arial",
+            title_font_color="#2c3e50",
+            height=500,
+            paper_bgcolor='rgba(248,249,250,0.8)',
+            plot_bgcolor='rgba(255,255,255,0.9)',
+            font=dict(family="Arial", size=12),
+            margin=dict(l=50, r=50, t=80, b=50)
+        )
+        
+        fig_corr.update_traces(
+            textfont_size=14,
+            textfont_color="white"
         )
         
         charts.append(("📊 Correlation Analysis", fig_corr))
         
-        # Scatter plot for top 2 metrics
+        # Enhanced scatter plot for top 2 metrics
         if len(numeric_cols) >= 2:
             x_col = numeric_cols[0]
             y_col = numeric_cols[1]
@@ -324,17 +337,27 @@ def create_visualizations(df, query_type="auto"):
                 y=y_col,
                 size=numeric_cols[2] if len(numeric_cols) > 2 else None,
                 color=categorical_cols[0] if len(categorical_cols) > 0 else None,
-                title=f"💎 Efficiency Analysis: {y_col.replace('_', ' ').title()} vs {x_col.replace('_', ' ').title()}",
+                title=f"<b>💎 Efficiency Analysis: {y_col.replace('_', ' ').title()} vs {x_col.replace('_', ' ').title()}</b>",
                 trendline="ols",
-                hover_data=numeric_cols[:3]
+                hover_data=numeric_cols[:3],
+                color_discrete_sequence=px.colors.qualitative.Set2
             )
             
             fig_scatter.update_layout(
-                title_font_size=18,
+                title_font_size=20,
                 title_x=0.5,
-                height=500,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
+                title_font_family="Arial",
+                title_font_color="#2c3e50",
+                height=550,
+                paper_bgcolor='rgba(248,249,250,0.8)',
+                plot_bgcolor='rgba(255,255,255,0.9)',
+                font=dict(family="Arial", size=12),
+                margin=dict(l=50, r=50, t=80, b=50)
+            )
+            
+            fig_scatter.update_traces(
+                marker=dict(size=12, line=dict(width=2, color='white')),
+                opacity=0.8
             )
             
             charts.append(("💎 Efficiency Analysis", fig_scatter))
@@ -343,7 +366,7 @@ def create_visualizations(df, query_type="auto"):
     if len(categorical_cols) > 0 and len(numeric_cols) > 0:
         cat_col = categorical_cols[0]
         
-        # Market share pie chart
+        # Enhanced market share pie chart
         if len(df[cat_col].unique()) <= 10:
             market_data = df.groupby(cat_col)[numeric_cols[0]].sum().reset_index()
             
@@ -351,54 +374,88 @@ def create_visualizations(df, query_type="auto"):
                 market_data,
                 values=numeric_cols[0],
                 names=cat_col,
-                title=f"🏆 Market Share Analysis by {cat_col.replace('_', ' ').title()}",
-                color_discrete_sequence=px.colors.qualitative.Set3
+                title=f"<b>🏆 Market Share Analysis by {cat_col.replace('_', ' ').title()}</b>",
+                color_discrete_sequence=px.colors.qualitative.Set3,
+                hole=0.4  # Donut chart for modern look
             )
             
             fig_pie.update_traces(
-                textposition='inside',
-                textinfo='percent+label',
-                textfont_size=12
+                textposition='auto',
+                textinfo='percent+label+value',
+                textfont_size=14,
+                textfont_color="white",
+                marker=dict(line=dict(color='white', width=3))
             )
             
             fig_pie.update_layout(
-                title_font_size=18,
+                title_font_size=20,
                 title_x=0.5,
-                height=500
+                title_font_family="Arial",
+                title_font_color="#2c3e50",
+                height=550,
+                paper_bgcolor='rgba(248,249,250,0.8)',
+                font=dict(family="Arial", size=12),
+                margin=dict(l=50, r=50, t=80, b=50),
+                showlegend=True,
+                legend=dict(
+                    orientation="v",
+                    yanchor="middle",
+                    y=0.5,
+                    xanchor="left",
+                    x=1.05
+                )
             )
             
             charts.append(("🏆 Market Share Analysis", fig_pie))
         
-        # Performance comparison bar chart
+        # Enhanced performance comparison bar chart
         comparison_data = df.groupby(cat_col)[numeric_cols[:3]].mean().reset_index()
         
         fig_comparison = px.bar(
             comparison_data,
             x=cat_col,
             y=numeric_cols[0],
-            title=f"📈 Performance Comparison by {cat_col.replace('_', ' ').title()}",
+            title=f"<b>📈 Performance Comparison by {cat_col.replace('_', ' ').title()}</b>",
             color=numeric_cols[0],
-            color_continuous_scale=['#667eea', '#764ba2', '#f093fb']
+            color_continuous_scale='Viridis',
+            text=numeric_cols[0]
         )
         
-        # Add average line
+        # Add average line with enhanced styling
         avg_line = df[numeric_cols[0]].mean()
         fig_comparison.add_hline(
             y=avg_line,
             line_dash="dash",
-            line_color="red",
-            annotation_text=f"Industry Average: {avg_line:,.0f}"
+            line_color="#e74c3c",
+            line_width=3,
+            annotation_text=f"Industry Average: {avg_line:,.0f}",
+            annotation_position="top right",
+            annotation_font_size=14,
+            annotation_font_color="#e74c3c"
+        )
+        
+        fig_comparison.update_traces(
+            texttemplate='%{text:,.0f}',
+            textposition='outside',
+            textfont_size=12,
+            marker_line_color='white',
+            marker_line_width=2
         )
         
         fig_comparison.update_layout(
-            title_font_size=18,
+            title_font_size=20,
             title_x=0.5,
-            height=500,
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)'
+            title_font_family="Arial",
+            title_font_color="#2c3e50",
+            height=550,
+            paper_bgcolor='rgba(248,249,250,0.8)',
+            plot_bgcolor='rgba(255,255,255,0.9)',
+            font=dict(family="Arial", size=12),
+            margin=dict(l=50, r=50, t=80, b=50),
+            xaxis=dict(title_font_size=14, tickangle=45),
+            yaxis=dict(title_font_size=14),
+            showlegend=False
         )
-        
-        fig_comparison.update_xaxes(tickangle=45)
         
         charts.append(("📈 Performance Benchmarking", fig_comparison))
     
@@ -415,23 +472,47 @@ def create_visualizations(df, query_type="auto"):
                     ratio_name = f"{col1}_per_{col2}"
                     df_efficiency[ratio_name] = df_efficiency[col1] / df_efficiency[col2].replace(0, 1)
         
-        # ROI-style analysis
+        # Enhanced ROI-style analysis
         efficiency_cols = [col for col in df_efficiency.columns if '_per_' in col]
         
         if efficiency_cols:
             fig_efficiency = px.box(
                 df_efficiency,
                 y=efficiency_cols[0],
-                title=f"💰 ROI Distribution Analysis: {efficiency_cols[0].replace('_', ' ').title()}",
-                color_discrete_sequence=['#667eea']
+                title=f"<b>💰 ROI Distribution Analysis: {efficiency_cols[0].replace('_', ' ').title()}</b>",
+                color_discrete_sequence=['#667eea'],
+                points="all"  # Show all data points
+            )
+            
+            # Add mean line
+            mean_val = df_efficiency[efficiency_cols[0]].mean()
+            fig_efficiency.add_hline(
+                y=mean_val,
+                line_dash="dash",
+                line_color="#e74c3c",
+                line_width=3,
+                annotation_text=f"Average ROI: {mean_val:.2f}",
+                annotation_position="top right"
+            )
+            
+            fig_efficiency.update_traces(
+                marker=dict(size=8, opacity=0.7, line=dict(width=2, color='white')),
+                boxpoints='outliers',
+                fillcolor='rgba(102, 126, 234, 0.6)',
+                line_color='#667eea',
+                line_width=3
             )
             
             fig_efficiency.update_layout(
-                title_font_size=18,
+                title_font_size=20,
                 title_x=0.5,
-                height=400,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
+                title_font_family="Arial",
+                title_font_color="#2c3e50",
+                height=500,
+                paper_bgcolor='rgba(248,249,250,0.8)',
+                plot_bgcolor='rgba(255,255,255,0.9)',
+                font=dict(family="Arial", size=12),
+                margin=dict(l=50, r=50, t=80, b=50)
             )
             
             charts.append(("💰 ROI Analysis", fig_efficiency))
@@ -451,27 +532,57 @@ def create_visualizations(df, query_type="auto"):
             top_performers,
             x=label_col,
             y=primary_metric,
-            title=f"🚀 Top Performers: {primary_metric.replace('_', ' ').title()}",
+            title=f"<b>🚀 Top Performers: {primary_metric.replace('_', ' ').title()}</b>",
             color=primary_metric,
-            color_continuous_scale=['#667eea', '#764ba2', '#f093fb']
+            color_continuous_scale='Plasma',
+            text=primary_metric
         )
         
-        # Add performance tiers
+        # Add enhanced performance tiers
         top_tier = top_performers[primary_metric].quantile(0.8)
         mid_tier = top_performers[primary_metric].quantile(0.6)
         
-        fig_ranking.add_hline(y=top_tier, line_dash="dot", line_color="gold", annotation_text="Top Tier")
-        fig_ranking.add_hline(y=mid_tier, line_dash="dot", line_color="silver", annotation_text="Mid Tier")
-        
-        fig_ranking.update_layout(
-            title_font_size=18,
-            title_x=0.5,
-            height=500,
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)'
+        fig_ranking.add_hline(
+            y=top_tier, 
+            line_dash="dot", 
+            line_color="#FFD700", 
+            line_width=3,
+            annotation_text="🥇 Top Tier",
+            annotation_font_color="#FFD700",
+            annotation_font_size=14
+        )
+        fig_ranking.add_hline(
+            y=mid_tier, 
+            line_dash="dot", 
+            line_color="#C0C0C0", 
+            line_width=3,
+            annotation_text="🥈 Mid Tier",
+            annotation_font_color="#C0C0C0",
+            annotation_font_size=14
         )
         
-        fig_ranking.update_xaxes(tickangle=45)
+        fig_ranking.update_traces(
+            texttemplate='%{text:,.0f}',
+            textposition='outside',
+            textfont_size=12,
+            marker_line_color='white',
+            marker_line_width=2
+        )
+        
+        fig_ranking.update_layout(
+            title_font_size=20,
+            title_x=0.5,
+            title_font_family="Arial",
+            title_font_color="#2c3e50",
+            height=550,
+            paper_bgcolor='rgba(248,249,250,0.8)',
+            plot_bgcolor='rgba(255,255,255,0.9)',
+            font=dict(family="Arial", size=12),
+            margin=dict(l=50, r=50, t=80, b=50),
+            xaxis=dict(title_font_size=14, tickangle=45),
+            yaxis=dict(title_font_size=14),
+            showlegend=False
+        )
         
         charts.append(("🚀 Performance Ranking", fig_ranking))
     
@@ -479,31 +590,67 @@ def create_visualizations(df, query_type="auto"):
     if len(numeric_cols) > 0:
         primary_col = numeric_cols[0]
         
-        # Create advanced histogram with quartiles
+        # Create enhanced histogram with quartiles
         fig_dist = px.histogram(
             df,
             x=primary_col,
-            nbins=20,
-            title=f"📊 Advanced Distribution: {primary_col.replace('_', ' ').title()}",
+            nbins=25,
+            title=f"<b>📊 Advanced Distribution: {primary_col.replace('_', ' ').title()}</b>",
             color_discrete_sequence=['#667eea'],
-            marginal="box"  # Add box plot on top
+            marginal="box",  # Add box plot on top
+            opacity=0.8
         )
         
-        # Add quartile lines
+        # Add enhanced quartile lines
         q1 = df[primary_col].quantile(0.25)
         q2 = df[primary_col].quantile(0.5)  # Median
         q3 = df[primary_col].quantile(0.75)
         
-        fig_dist.add_vline(x=q1, line_dash="dash", line_color="orange", annotation_text=f"Q1: {q1:,.0f}")
-        fig_dist.add_vline(x=q2, line_dash="dash", line_color="red", annotation_text=f"Median: {q2:,.0f}")
-        fig_dist.add_vline(x=q3, line_dash="dash", line_color="green", annotation_text=f"Q3: {q3:,.0f}")
+        fig_dist.add_vline(
+            x=q1, 
+            line_dash="dash", 
+            line_color="#ff9500", 
+            line_width=3,
+            annotation_text=f"Q1: {q1:,.0f}",
+            annotation_font_color="#ff9500",
+            annotation_font_size=14
+        )
+        fig_dist.add_vline(
+            x=q2, 
+            line_dash="dash", 
+            line_color="#e74c3c", 
+            line_width=3,
+            annotation_text=f"Median: {q2:,.0f}",
+            annotation_font_color="#e74c3c",
+            annotation_font_size=14
+        )
+        fig_dist.add_vline(
+            x=q3, 
+            line_dash="dash", 
+            line_color="#27ae60", 
+            line_width=3,
+            annotation_text=f"Q3: {q3:,.0f}",
+            annotation_font_color="#27ae60",
+            annotation_font_size=14
+        )
+        
+        fig_dist.update_traces(
+            marker_line_color='white',
+            marker_line_width=2
+        )
         
         fig_dist.update_layout(
-            title_font_size=18,
+            title_font_size=20,
             title_x=0.5,
-            height=500,
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)'
+            title_font_family="Arial",
+            title_font_color="#2c3e50",
+            height=550,
+            paper_bgcolor='rgba(248,249,250,0.8)',
+            plot_bgcolor='rgba(255,255,255,0.9)',
+            font=dict(family="Arial", size=12),
+            margin=dict(l=50, r=50, t=80, b=50),
+            xaxis=dict(title_font_size=14),
+            yaxis=dict(title_font_size=14)
         )
         
         charts.append(("📊 Distribution Analytics", fig_dist))
@@ -543,7 +690,7 @@ def explain_results(df, sql_query):
                 insights.append(f"💰 **{col_name} Performance Metrics**:")
                 insights.append(f"- **Total Portfolio Value**: ${total:,.0f}")
                 insights.append(f"- **Average Performance**: ${avg:,.0f} per unit")
-                insights.append(f"- **Performance Range**: ${min_val:,.0f} to ${max_val:,.0f}")
+                insights.append(f"- **Performance Range**: ${min_val:,.0f} - ${max_val:,.0f}")
                 insights.append(f"- **Top Performer Advantage**: {performance_ratio:.1f}x above average")
                 
                 # Strategic implications
@@ -751,12 +898,16 @@ def main():
                     numeric_col = df.select_dtypes(include=['number']).columns[0]
                     natural_language = f"Show me the top 10 records ordered by {numeric_col} in descending order"
                     st.session_state.query_input = natural_language
+                    st.session_state.auto_execute = True
+                    st.rerun()
             
             if st.button("📈 Growth Opportunities", key="growth_ops", help="Find underperforming segments with potential"):
                 if df.select_dtypes(include=['number']).columns.any():
                     numeric_col = df.select_dtypes(include=['number']).columns[0]
                     natural_language = f"Show records where {numeric_col} is below average and identify improvement opportunities"
                     st.session_state.query_input = natural_language
+                    st.session_state.auto_execute = True
+                    st.rerun()
         
         with example_col2:
             st.markdown("#### 🎯 **Strategic Insights**")
@@ -765,6 +916,8 @@ def main():
                 if len(text_cols) > 0:
                     natural_language = f"Group by {text_cols[0]} and show total performance with percentage breakdown"
                     st.session_state.query_input = natural_language
+                    st.session_state.auto_execute = True
+                    st.rerun()
             
             if st.button("⚖️ Performance Comparison", key="comparison", help="Compare performance across categories"):
                 if len(df.select_dtypes(include=['object']).columns) > 0 and len(df.select_dtypes(include=['number']).columns) > 0:
@@ -772,6 +925,8 @@ def main():
                     num_col = df.select_dtypes(include=['number']).columns[0]
                     natural_language = f"Compare average {num_col} across different {text_col} categories"
                     st.session_state.query_input = natural_language
+                    st.session_state.auto_execute = True
+                    st.rerun()
         
         with example_col3:
             st.markdown("#### 💰 **ROI Analysis**")
@@ -780,25 +935,35 @@ def main():
                     numeric_col = df.select_dtypes(include=['number']).columns[0]
                     natural_language = f"Analyze {numeric_col} distribution showing quartiles and outliers for optimization"
                     st.session_state.query_input = natural_language
+                    st.session_state.auto_execute = True
+                    st.rerun()
             
             if st.button("🚀 Business Impact", key="impact", help="Calculate total business impact and ROI"):
                 numeric_cols = df.select_dtypes(include=['number']).columns
                 if len(numeric_cols) > 0:
                     natural_language = f"Calculate total business value, average performance, and identify the 80/20 rule patterns"
                     st.session_state.query_input = natural_language
+                    st.session_state.auto_execute = True
+                    st.rerun()
         
         # Natural language input with enhanced styling
         st.markdown("---")
         st.markdown("### 💭 **Custom Business Question**")
         st.markdown("*Describe your analysis needs in plain English - our AI will handle the complex SQL*")
         
+        # Query input with enhanced styling and auto-population
         query_input = st.text_area(
             "What insights do you need from your data?",
             value=st.session_state.get('query_input', ''),
             height=120,
             placeholder="e.g., 'Compare Q4 performance across regions and identify the biggest growth opportunities' or 'Show me ROI analysis by customer segment with budget reallocation recommendations'",
-            help="Pro tip: Be specific about what business decisions you're trying to make"
+            help="Pro tip: Be specific about what business decisions you're trying to make",
+            key="main_query_input"
         )
+        
+        # Update session state when input changes
+        if query_input != st.session_state.get('query_input', ''):
+            st.session_state.query_input = query_input
         
         # Enhanced generate button
         col1, col2, col3 = st.columns([1, 2, 1])
@@ -808,8 +973,13 @@ def main():
                 type="primary",
                 help="Get instant SQL + charts + strategic insights",
                 use_container_width=True
-            )
-            if query_input:
+            ) or st.session_state.get('auto_execute', False)
+            
+            if generate_button and query_input:
+                # Reset auto_execute flag
+                if 'auto_execute' in st.session_state:
+                    del st.session_state.auto_execute
+                
                 # Check usage limit
                 if not check_usage_limit():
                     show_upgrade_banner()
@@ -980,6 +1150,8 @@ def main():
                         st.markdown("- Check that column names in your query match the data preview")
                         st.markdown("- Use the example buttons above for tested queries")
 
+            elif query_input and not generate_button:
+                st.warning("Please click the 'Generate Executive Analysis' button to analyze your data.")
             else:
                 st.warning("Please enter a description of what you want to analyze.")
     
