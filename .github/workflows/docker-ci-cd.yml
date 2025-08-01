@@ -238,6 +238,7 @@ jobs:
             type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ github.ref_name }}-${{ github.sha }}
 
       - name: Create Dockerfile for backend
         run: |
@@ -303,7 +304,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
-          outputs: type=image,push=true
 
   # Container Security Scanning
   container-security:
