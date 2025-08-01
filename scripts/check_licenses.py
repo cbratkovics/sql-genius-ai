@@ -58,6 +58,22 @@ FORBIDDEN_LICENSES: Set[str] = {
     'Commercial'
 }
 
+# Known packages with valid licenses that sometimes show as UNKNOWN
+PACKAGE_LICENSE_WHITELIST: Dict[str, str] = {
+    'attrs': 'MIT License',
+    'humanize': 'MIT License',
+    'jsonschema': 'MIT License',
+    'jsonschema-specifications': 'MIT License',
+    'mypy_extensions': 'MIT License',
+    'mypy-extensions': 'MIT License',
+    'referencing': 'MIT License',
+    'regex': 'Apache Software License',
+    'typing_extensions': 'Python Software Foundation License',
+    'typing-extensions': 'Python Software Foundation License',
+    'urllib3': 'MIT License',
+    'zipp': 'MIT License'
+}
+
 def load_licenses(file_path: str = 'licenses.json') -> List[Dict]:
     """Load license information from pip-licenses output"""
     try:
@@ -118,7 +134,13 @@ def check_license_compliance(licenses: List[Dict]) -> Dict[str, List[Dict]]:
         license_name = package.get('License', 'UNKNOWN')
         version = package.get('Version', 'Unknown')
         
-        category = categorize_license(license_name)
+        # Check if package is in whitelist
+        if package_name in PACKAGE_LICENSE_WHITELIST:
+            # Use the known license from whitelist
+            license_name = PACKAGE_LICENSE_WHITELIST[package_name]
+            category = 'approved'  # All whitelisted packages are approved
+        else:
+            category = categorize_license(license_name)
         
         results[category].append({
             'name': package_name,
