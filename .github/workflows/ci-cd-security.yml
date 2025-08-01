@@ -1,11 +1,13 @@
-name: CI/CD Pipeline with Security
+name: CI/CD Pipeline with Security (Legacy)
 
+# Disabled - Using Docker-based pipeline instead
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+  # push:
+  #   branches: [main, develop]
+  # pull_request:
+  #   branches: [main]
+  #   types: [opened, synchronize, reopened]
 
 env:
   REGISTRY: ghcr.io

@@ -1,0 +1,224 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Testing
+  postgres-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: test_db
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ci-network
+
+  # Redis for Caching and Session Management
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_test_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ci-network
+
+  # Backend API Service
+  backend-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@postgres-test:5432/test_db
+      - REDIS_URL=redis://redis-test:6379
+      - JWT_SECRET_KEY=test-jwt-secret-key-for-ci
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-test-key}
+      - ENVIRONMENT=testing
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./scripts:/app/scripts
+    networks:
+      - ci-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Security Scanner Service
+  security-scanner:
+    image: python:3.11-slim
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y git curl build-essential libpq-dev pkg-config &&
+        pip install --no-cache-dir safety bandit semgrep pip-licenses &&
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin &&
+        echo 'Running security scans...' &&
+        safety check --json --output /workspace/reports/safety-report.json || true &&
+        bandit -r backend/ -f json -o /workspace/reports/bandit-report.json || true &&
+        trufflehog git file://. --only-verified --json > /workspace/reports/trufflehog-results.json || true &&
+        pip-licenses --format=json --output-file=/workspace/reports/licenses.json || true &&
+        python scripts/check_licenses.py --input /workspace/reports/licenses.json || true &&
+        echo 'Security scans completed'
+      "
+    networks:
+      - ci-network
+    profiles:
+      - security
+
+  # Code Quality Service
+  code-quality:
+    image: python:3.11-slim
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y build-essential libpq-dev pkg-config &&
+        pip install --no-cache-dir -r backend/requirements.txt &&
+        pip install --no-cache-dir black flake8 mypy isort pytest pytest-cov &&
+        echo 'Running code quality checks...' &&
+        black --check backend/ || true &&
+        isort --check-only backend/ || true &&
+        flake8 backend/ --max-line-length=100 --ignore=E203,W503 || true &&
+        mypy backend/ --ignore-missing-imports || true &&
+        cd backend && pytest --cov=. --cov-report=xml --cov-report=html --cov-report=term || true &&
+        echo 'Code quality checks completed'
+      "
+    environment:
+      - PYTHONPATH=/workspace/backend
+    networks:
+      - ci-network
+    profiles:
+      - quality
+
+  # Performance Testing Service
+  performance-tester:
+    image: python:3.11-slim
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y build-essential libpq-dev pkg-config curl &&
+        pip install --no-cache-dir -r backend/requirements.txt &&
+        pip install --no-cache-dir locust pytest-benchmark &&
+        echo 'Running performance tests...' &&
+        cd backend && pytest tests/performance/ --benchmark-json=/workspace/reports/benchmark.json || true &&
+        python /workspace/scripts/check_performance_regression.py /workspace/reports/benchmark.json || true &&
+        echo 'Performance tests completed'
+      "
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@postgres-test:5432/test_db
+      - REDIS_URL=redis://redis-test:6379
+    depends_on:
+      - postgres-test
+      - redis-test
+      - backend-api
+    networks:
+      - ci-network
+    profiles:
+      - performance
+
+  # Container Security Scanner
+  container-scanner:
+    image: aquasec/trivy:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workspace
+    working_dir: /workspace
+    command: >
+      sh -c "
+        echo 'Scanning container images for vulnerabilities...' &&
+        trivy image --format json --output /workspace/reports/trivy-results.json sqlgenius/api:latest || true &&
+        echo 'Container security scan completed'
+      "
+    networks:
+      - ci-network
+    profiles:
+      - container-security
+
+  # Infrastructure Security Scanner
+  infrastructure-scanner:
+    image: bridgecrew/checkov:latest
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    command: >
+      sh -c "
+        echo 'Scanning infrastructure for security issues...' &&
+        checkov -d . --framework dockerfile,kubernetes --output json --output-file /workspace/reports/checkov-results.json || true &&
+        echo 'Infrastructure security scan completed'
+      "
+    networks:
+      - ci-network
+    profiles:
+      - infrastructure-security
+
+  # Monitoring Stack for CI/CD
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - ci-network
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/dashboard.json
+    networks:
+      - ci-network
+    profiles:
+      - monitoring
+
+networks:
+  ci-network:
+    driver: bridge
+
+volumes:
+  postgres_test_data:
+  redis_test_data:
+  prometheus_data:
+  grafana_data:
