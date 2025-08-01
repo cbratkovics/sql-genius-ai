@@ -383,32 +383,43 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     environment: staging
     
-    container:
-      image: alpine:latest
-    
     steps:
-      - name: Install dependencies
-        run: |
-          apk add --no-cache curl git
-          curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq
-          chmod +x /usr/local/bin/yq
-
-      - name: Checkout GitOps repository
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}-gitops
-          token: ${{ secrets.GITOPS_TOKEN }}
-          path: gitops
 
       - name: Update staging deployment
         run: |
-          cd gitops
-          yq eval '.spec.template.spec.containers[0].image = "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop-${{ github.sha }}"' -i staging/deployment.yaml
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add .
-          git commit -m "Update staging image to ${{ github.sha }}" || exit 0
-          git push
+          # Create staging directory if it doesn't exist
+          mkdir -p infrastructure/kubernetes/staging
+          
+          # Create or update staging deployment manifest
+          cat > infrastructure/kubernetes/staging/deployment.yaml << EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: sql-genius-ai
+            namespace: staging
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app: sql-genius-ai
+            template:
+              metadata:
+                labels:
+                  app: sql-genius-ai
+              spec:
+                containers:
+                - name: backend
+                  image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop-${{ github.sha }}
+                  ports:
+                  - containerPort: 8000
+                  env:
+                  - name: ENVIRONMENT
+                    value: staging
+          EOF
+          
+          echo "Staging deployment manifest updated with image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop-${{ github.sha }}"
 
   deploy-production:
     name: Deploy to Production
@@ -417,32 +428,50 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
     
-    container:
-      image: alpine:latest
-    
     steps:
-      - name: Install dependencies
-        run: |
-          apk add --no-cache curl git
-          curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq
-          chmod +x /usr/local/bin/yq
-
-      - name: Checkout GitOps repository
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}-gitops
-          token: ${{ secrets.GITOPS_TOKEN }}
-          path: gitops
 
       - name: Update production deployment
         run: |
-          cd gitops
-          yq eval '.spec.template.spec.containers[0].image = "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ github.sha }}"' -i production/deployment.yaml
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add .
-          git commit -m "Update production image to ${{ github.sha }}" || exit 0
-          git push
+          # Create production directory if it doesn't exist
+          mkdir -p infrastructure/kubernetes/production
+          
+          # Create or update production deployment manifest
+          cat > infrastructure/kubernetes/production/deployment.yaml << EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: sql-genius-ai
+            namespace: production
+          spec:
+            replicas: 3
+            selector:
+              matchLabels:
+                app: sql-genius-ai
+            template:
+              metadata:
+                labels:
+                  app: sql-genius-ai
+              spec:
+                containers:
+                - name: backend
+                  image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ github.sha }}
+                  ports:
+                  - containerPort: 8000
+                  env:
+                  - name: ENVIRONMENT
+                    value: production
+                  resources:
+                    requests:
+                      memory: "256Mi"
+                      cpu: "250m"
+                    limits:
+                      memory: "512Mi"
+                      cpu: "500m"
+          EOF
+          
+          echo "Production deployment manifest updated with image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ github.sha }}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
