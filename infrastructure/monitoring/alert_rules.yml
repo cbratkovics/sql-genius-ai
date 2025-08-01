@@ -1,0 +1,259 @@
+groups:
+  - name: sql_genius_slo_alerts
+    rules:
+      # API Availability SLO
+      - alert: APIAvailabilitySLOViolation
+        expr: |
+          (
+            sum(rate(http_requests_total{status_code!~"5.."}[5m])) /
+            sum(rate(http_requests_total[5m]))
+          ) * 100 < 99.9
+        for: 2m
+        labels:
+          severity: critical
+          slo: api_availability
+          team: platform
+        annotations:
+          summary: "API availability SLO violation"
+          description: "API availability is {{ $value }}%, below the 99.9% SLO target"
+          runbook_url: "https://runbooks.sqlgenius.ai/slo/api-availability"
+
+      # API Latency SLO
+      - alert: APILatencySLOViolation
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          slo: api_latency
+          team: platform
+        annotations:
+          summary: "API latency SLO violation"
+          description: "95th percentile API latency is {{ $value }}s, above the 2.0s SLO target"
+
+      # SQL Generation Success Rate SLO
+      - alert: SQLGenerationReliabilitySLOViolation
+        expr: |
+          (
+            sum(rate(sql_generation_total{status="success"}[5m])) /
+            sum(rate(sql_generation_total[5m]))
+          ) * 100 < 95.0
+        for: 3m
+        labels:
+          severity: critical
+          slo: sql_generation_reliability
+          team: ai
+        annotations:
+          summary: "SQL generation reliability SLO violation"
+          description: "SQL generation success rate is {{ $value }}%, below the 95% SLO target"
+
+      # Error Budget Burn Rate
+      - alert: HighErrorBudgetBurnRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status_code=~"5.."}[1h])) /
+            sum(rate(http_requests_total[1h]))
+          ) > 0.1
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High error budget burn rate"
+          description: "Error budget is burning at {{ $value | humanizePercentage }} rate"
+
+  - name: sql_genius_application_alerts
+    rules:
+      # High Error Rate
+      - alert: HighApplicationErrorRate
+        expr: |
+          sum(rate(errors_total[5m])) > 10
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High application error rate"
+          description: "Application error rate is {{ $value }} errors/sec"
+
+      # Database Connection Issues
+      - alert: DatabaseConnectionPoolExhaustion
+        expr: |
+          db_connections_active / 100 > 0.9
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Database connection pool is {{ $value | humanizePercentage }} full"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: |
+          (system_memory_usage_bytes / (1024^3)) > 8
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}GB"
+
+      # Queue Depth Growing
+      - alert: HighQueryQueueDepth
+        expr: |
+          query_queue_depth > 100
+        for: 3m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High query queue depth"
+          description: "Query queue depth is {{ $value }} items"
+
+      # AI API Cost Spike
+      - alert: AIAPICostSpike
+        expr: |
+          increase(ai_api_cost_total[1h]) > 100
+        for: 0m
+        labels:
+          severity: warning
+          team: ai
+          cost_impact: high
+        annotations:
+          summary: "AI API cost spike detected"
+          description: "AI API costs increased by ${{ $value }} in the last hour"
+
+      # Cache Hit Rate Low
+      - alert: LowCacheHitRate
+        expr: |
+          (
+            sum(rate(cache_hits_total[5m])) /
+            (sum(rate(cache_hits_total[5m])) + sum(rate(cache_misses_total[5m])))
+          ) * 100 < 50
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value }}%, below optimal threshold"
+
+  - name: sql_genius_business_alerts
+    rules:
+      # Revenue Impact
+      - alert: RevenueImpactingOutage
+        expr: |
+          sum(rate(revenue_events_total[5m])) == 0
+        for: 5m
+        labels:
+          severity: critical
+          team: business
+          impact: revenue
+        annotations:
+          summary: "Revenue impacting outage detected"
+          description: "No revenue events recorded in the last 5 minutes"
+
+      # High Churn Indicator
+      - alert: HighChurnIndicator
+        expr: |
+          sum(rate(auth_events_total{event_type="logout"}[1h])) /
+          sum(rate(auth_events_total{event_type="login"}[1h])) > 0.8
+        for: 30m
+        labels:
+          severity: warning
+          team: product
+        annotations:
+          summary: "High user churn indicator"
+          description: "Logout to login ratio is {{ $value | humanizePercentage }}"
+
+      # Failed Payment Processing
+      - alert: FailedPaymentProcessing
+        expr: |
+          sum(rate(revenue_events_total{event_type="payment_failed"}[5m])) > 5
+        for: 2m
+        labels:
+          severity: critical
+          team: billing
+        annotations:
+          summary: "High failed payment rate"
+          description: "{{ $value }} payment failures per second"
+
+  - name: sql_genius_security_alerts
+    rules:
+      # Authentication Failures
+      - alert: HighAuthenticationFailures
+        expr: |
+          sum(rate(auth_events_total{status="failed"}[5m])) > 20
+        for: 2m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value }} authentication failures per second"
+
+      # Suspicious Activity
+      - alert: SuspiciousUserActivity
+        expr: |
+          sum(rate(sql_generation_total[1m])) by (tenant_id) > 100
+        for: 1m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Suspicious user activity detected"
+          description: "Tenant {{ $labels.tenant_id }} generating {{ $value }} queries per second"
+
+      # Potential DDoS
+      - alert: PotentialDDoSAttack
+        expr: |
+          sum(rate(http_requests_total[1m])) by (tenant_id) > 1000
+        for: 30s
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Potential DDoS attack detected"
+          description: "{{ $value }} requests per second from tenant {{ $labels.tenant_id }}"
+
+  - name: sql_genius_infrastructure_alerts
+    rules:
+      # Pod Crashes
+      - alert: PodCrashLooping
+        expr: |
+          rate(container_restart_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Pod crash looping"
+          description: "Pod {{ $labels.pod }} is crash looping"
+
+      # Disk Space
+      - alert: HighDiskUsage
+        expr: |
+          (system_disk_usage_bytes / (1024^3)) > 50
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is {{ $value }}GB on {{ $labels.mount_point }}"
+
+      # Service Discovery Issues
+      - alert: ServiceDiscoveryDown
+        expr: |
+          up{job="consul"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service discovery is down"
+          description: "Consul service discovery is not responding"

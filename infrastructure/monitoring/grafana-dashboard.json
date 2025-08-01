@@ -1,0 +1,280 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "SQL Genius AI - Platform Overview",
+    "tags": ["sql-genius", "platform", "sre"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Level Objectives",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "(sum(rate(http_requests_total{status_code!~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))) * 100",
+            "legendFormat": "API Availability",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "API Latency P95",
+            "refId": "B"
+          },
+          {
+            "expr": "(sum(rate(sql_generation_total{status=\"success\"}[5m])) / sum(rate(sql_generation_total[5m]))) * 100",
+            "legendFormat": "SQL Generation Success Rate",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 95},
+                {"color": "green", "value": 99}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[5m])) by (status_code)",
+            "legendFormat": "{{status_code}}xx",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {"label": "requests/sec", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 3,
+        "title": "Response Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "50th percentile",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "95th percentile",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "99th percentile",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "seconds", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "SQL Generation Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(sql_generation_total[5m])) by (status)",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {"label": "generations/sec", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 5,
+        "title": "AI API Cost",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(increase(ai_api_cost_total[1h])) by (provider)",
+            "legendFormat": "{{provider}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {"label": "USD/hour", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Active Users",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(user_sessions_active)",
+            "legendFormat": "Active Sessions",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 1000},
+                {"color": "red", "value": 5000}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 24}
+      },
+      {
+        "id": 7,
+        "title": "Cache Hit Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "(sum(rate(cache_hits_total[5m])) / (sum(rate(cache_hits_total[5m])) + sum(rate(cache_misses_total[5m])))) * 100",
+            "legendFormat": "Hit Rate %",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 70},
+                {"color": "green", "value": 85}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "Queue Depth",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(query_queue_depth)",
+            "legendFormat": "Queue Items",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 50},
+                {"color": "red", "value": 100}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 24}
+      },
+      {
+        "id": 9,
+        "title": "Error Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(errors_total[5m]))",
+            "legendFormat": "Errors/sec",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 20}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 24}
+      },
+      {
+        "id": 10,
+        "title": "Resource Utilization",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "system_cpu_usage_percent",
+            "legendFormat": "CPU %",
+            "refId": "A"
+          },
+          {
+            "expr": "(system_memory_usage_bytes / (1024^3))",
+            "legendFormat": "Memory GB",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {"label": "percentage / GB", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28}
+      },
+      {
+        "id": 11,
+        "title": "Database Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "Query Latency P95",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(db_connections_active)",
+            "legendFormat": "Active Connections",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {"label": "seconds / connections", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28}
+      },
+      {
+        "id": 12,
+        "title": "Business Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(revenue_events_total[1h])) by (event_type)",
+            "legendFormat": "{{event_type}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {"label": "events/hour", "min": 0}
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 36}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+}
