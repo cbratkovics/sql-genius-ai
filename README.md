@@ -4,6 +4,11 @@
 
 <div align="center">
 
+[![Deploy on Render](https://img.shields.io/badge/Deploy%20on-Render-46E3B7?style=for-the-badge)](https://sql-genius-api.onrender.com)
+[![Frontend on Vercel](https://img.shields.io/badge/Frontend-Vercel-000000?style=for-the-badge)](https://sql-genius.vercel.app)
+[![API Docs](https://img.shields.io/badge/API-Docs-2196F3?style=for-the-badge)](https://sql-genius-api.onrender.com/docs)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-FF6B6B?style=for-the-badge)](https://sql-genius.vercel.app/demo)
+
 [![Enterprise Ready](https://img.shields.io/badge/Enterprise-Ready-success?style=for-the-badge&logo=shield)](https://github.com/cbratkovics/sql-genius-ai)
 [![Multi-Tenant](https://img.shields.io/badge/Multi--Tenant-SaaS-blue?style=for-the-badge&logo=building)](https://github.com/cbratkovics/sql-genius-ai)
 [![Security First](https://img.shields.io/badge/Security-First-red?style=for-the-badge&logo=lock)](https://github.com/cbratkovics/sql-genius-ai)
@@ -93,6 +98,40 @@ Container Security: Trivy, Dockle
 Performance: Load testing with Locust
 License Compliance: Automated validation
 ```
+
+---
+
+## 🚀 **Live Deployment**
+
+### **Production URLs**
+- **🌐 Live Demo**: [https://sql-genius.vercel.app](https://sql-genius.vercel.app)
+- **📊 Metrics Dashboard**: [https://sql-genius.vercel.app/metrics](https://sql-genius.vercel.app/metrics)
+- **🔧 API Backend**: [https://sql-genius-api.onrender.com](https://sql-genius-api.onrender.com)
+- **📚 API Documentation**: [https://sql-genius-api.onrender.com/docs](https://sql-genius-api.onrender.com/docs)
+
+### **Quick Deploy**
+
+#### Deploy Backend to Render
+1. Fork this repository
+2. Connect to [Render](https://render.com)
+3. Create new Blueprint from `render.yaml`
+4. Set environment variables:
+   - `ANTHROPIC_API_KEY`: Your Claude API key
+   - `JWT_SECRET_KEY`: Auto-generated
+   - `DATABASE_URL`: Auto-configured
+
+#### Deploy Frontend to Vercel
+```bash
+cd sql-genius-frontend
+npx vercel --prod
+```
+
+### **Demo Features**
+- **SQL Generation**: Natural language to SQL with AI
+- **Live Playground**: Interactive query builder
+- **Real-time Metrics**: Performance monitoring dashboard
+- **Schema Templates**: E-commerce, SaaS, Healthcare, Financial
+- **Sandboxed Execution**: Safe query testing environment
 
 ---
 

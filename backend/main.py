@@ -6,7 +6,7 @@ import time
 import logging
 from backend.core.config import settings
 from backend.core.database import create_tables
-from backend.api import auth, users
+from backend.api import auth, users, demo
 
 
 logging.basicConfig(level=logging.INFO)
@@ -88,6 +88,7 @@ async def health_check():
 
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(users.router, prefix=settings.API_V1_STR)
+app.include_router(demo.router, prefix=settings.API_V1_STR)
 
 
 if __name__ == "__main__":
