@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, DateTime, JSON, Enum, Boolean, Integer
+from sqlalchemy import Column, String, Text, DateTime, JSON, Enum, Boolean, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from backend.models.base import Base, TimestampMixin, UUIDMixin, TenantMixin
 import enum
@@ -48,7 +48,7 @@ class AuditLog(Base, UUIDMixin, TimestampMixin, TenantMixin):
     severity = Column(Enum(AuditSeverity), default=AuditSeverity.LOW, nullable=False)
     
     # User and session info
-    user_id = Column(String, nullable=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
     session_id = Column(String, nullable=True)
     ip_address = Column(String, nullable=True)
     user_agent = Column(String, nullable=True)
@@ -106,7 +106,7 @@ class APIKey(Base, UUIDMixin, TimestampMixin, TenantMixin):
     name = Column(String, nullable=False)
     key_hash = Column(String, unique=True, nullable=False, index=True)
     
-    user_id = Column(String, nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     
     # Permissions and limits
     permissions = Column(JSON, default=list)

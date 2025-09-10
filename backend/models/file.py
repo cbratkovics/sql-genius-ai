@@ -55,6 +55,8 @@ class File(Base, UUIDMixin, TimestampMixin, TenantMixin, SoftDeleteMixin):
     data_classification = Column(String, nullable=True)
     
     # Relationships
+    user = relationship("User", foreign_keys=[user_id])
+    tenant = relationship("Tenant", back_populates="files")
     queries = relationship("Query", back_populates="file")
     
     # Retention
