@@ -1,0 +1,19 @@
+name: Frontend CI
+on:
+  pull_request:
+    paths: ["sql-genius-frontend/**", ".github/workflows/ci-frontend.yml"]
+  push:
+    branches: [main]
+    paths: ["sql-genius-frontend/**", ".github/workflows/ci-frontend.yml"]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sql-genius-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "18" }
+      - run: npm ci
+      - run: npm run build

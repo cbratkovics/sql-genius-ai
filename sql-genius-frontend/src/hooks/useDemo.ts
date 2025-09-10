@@ -27,7 +27,7 @@ export const useGenerateSQL = () => {
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast.success('SQL generated successfully!');
+        toast.success('SQL generated successfully');
       }
     },
     onError: (error: any) => {
@@ -55,7 +55,7 @@ export const useExecuteSandbox = () => {
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast.success(`Query executed! ${data.rows_affected} rows affected.`);
+        toast.success(`Query executed. ${data.rows_affected} rows affected.`);
       }
     },
     onError: () => {

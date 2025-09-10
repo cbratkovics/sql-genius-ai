@@ -257,9 +257,9 @@ class PerformanceRegressionChecker:
                     continue
                 
                 severity_icon = {
-                    RegressionSeverity.CRITICAL: "🔴",
-                    RegressionSeverity.MAJOR: "🟠", 
-                    RegressionSeverity.MINOR: "🟡"
+                    RegressionSeverity.CRITICAL: "[CRITICAL]",
+                    RegressionSeverity.MAJOR: "[MAJOR]", 
+                    RegressionSeverity.MINOR: "[MINOR]"
                 }
                 
                 print(f"\n{severity_icon[severity]} {severity.value.upper()} REGRESSIONS:")
@@ -274,7 +274,7 @@ class PerformanceRegressionChecker:
         improvements = [r for r in regressions if r.change_percent < -5.0]  # >5% improvement
         if improvements:
             print(f"\n" + "-"*80)
-            print("🟢 PERFORMANCE IMPROVEMENTS:")
+            print("PERFORMANCE IMPROVEMENTS:")
             print("-"*80)
             
             for improvement in sorted(improvements, key=lambda x: x.change_percent):
@@ -286,11 +286,11 @@ class PerformanceRegressionChecker:
         # Budget violations
         if budget_violations:
             print(f"\n" + "-"*80)
-            print("💰 PERFORMANCE BUDGET VIOLATIONS:")
+            print("PERFORMANCE BUDGET VIOLATIONS:")
             print("-"*80)
             
             for violation in budget_violations:
-                print(f"  ❌ {violation}")
+                print(f"  [VIOLATION] {violation}")
         
         # Recommendations
         print(f"\n" + "-"*80)
@@ -298,28 +298,28 @@ class PerformanceRegressionChecker:
         print("-"*80)
         
         if critical_regressions > 0:
-            print("  🔴 CRITICAL: Immediate action required!")
+            print("  [CRITICAL] Immediate action required!")
             print("     - Review recent changes that may impact performance")
             print("     - Consider rolling back problematic commits")
             print("     - Profile critical paths to identify bottlenecks")
         
         if major_regressions > 0:
-            print("  🟠 MAJOR: Performance degradation detected")
+            print("  [MAJOR] Performance degradation detected")
             print("     - Schedule performance optimization work")
             print("     - Review and optimize slow operations")
         
         if minor_regressions > 0:
-            print("  🟡 MINOR: Monitor these tests closely")
+            print("  [MINOR] Monitor these tests closely")
             print("     - Track trend over multiple builds")
             print("     - Consider optimization if trend continues")
         
         if budget_violations:
-            print("  💰 BUDGET: Performance budget exceeded")
+            print("  [BUDGET] Performance budget exceeded")
             print("     - Optimize slow operations to meet SLA requirements")
             print("     - Consider increasing infrastructure resources")
         
         if total_regressions == 0 and not budget_violations:
-            print("  ✅ All performance tests within acceptable limits")
+            print("  [OK] All performance tests within acceptable limits")
             print("     - Continue monitoring performance trends")
     
     def export_results(
@@ -446,9 +446,9 @@ def main():
         exit_code = 1
     
     if exit_code == 0:
-        logger.info("✅ Performance regression check PASSED")
+        logger.info("Performance regression check PASSED")
     else:
-        logger.error("❌ Performance regression check FAILED")
+        logger.error("Performance regression check FAILED")
     
     sys.exit(exit_code)
 

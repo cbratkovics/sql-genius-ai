@@ -208,7 +208,7 @@ class EmailService:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Welcome to SQL Genius AI! 🚀</h1>
+                    <h1>Welcome to SQL Genius AI!</h1>
                 </div>
                 <div class="content">
                     <h2>Hi {full_name},</h2>
@@ -239,7 +239,7 @@ class EmailService:
         
         return await self.send_email(
             email,
-            "Welcome to SQL Genius AI! 🚀",
+            "Welcome to SQL Genius AI!",
             html_content
         )
 

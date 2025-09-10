@@ -31,7 +31,9 @@ class Settings(BaseSettings):
     )
 
     # CORS
-    CORS_ORIGINS: List[str] = ["*"]  # Allow all for demo
+    CORS_ORIGINS: List[str] = [
+        o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()
+    ] or ["*"]
 
     # Redis
     REDIS_URL: Optional[str] = os.getenv("REDIS_URL")

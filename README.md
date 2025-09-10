@@ -1,4 +1,4 @@
-# 🧠 SQL Genius AI - Enterprise SaaS Platform
+# SQL Genius AI - Enterprise SaaS Platform
 
 **Production-Ready Multi-Tenant SaaS for Intelligent Data Analysis**
 
@@ -22,37 +22,37 @@
 
 ---
 
-## 🏗️ **Enterprise Architecture**
+## Enterprise Architecture
 
-### 🔧 **Core Platform**
+### Core Platform
 - **Multi-tenant SaaS** with database-per-tenant isolation
 - **FastAPI backend** with async PostgreSQL and Redis
 - **JWT authentication** with RSA key rotation and service mesh
 - **Role-based access control** (RBAC) with fine-grained permissions
 - **Multi-factor authentication** (TOTP, SMS, email, backup codes)
 
-### 🛡️ **Security & Compliance**
+### Security & Compliance
 - **Zero-trust architecture** with service mesh authentication
 - **Client-side encryption** with column-level access control
 - **Data masking** and automated compliance reporting
 - **Security scanning** integrated in CI/CD pipeline
 - **Vulnerability management** with automated patching
 
-### 📊 **Observability & Monitoring**
+### Observability & Monitoring
 - **Prometheus metrics** with custom business KPIs
 - **Grafana dashboards** for system and application monitoring
 - **ELK stack** for centralized logging and analysis
 - **Jaeger tracing** for distributed request tracking
 - **SLI/SLO monitoring** with automated alerting
 
-### 💰 **FinOps & Cost Management**
+### FinOps & Cost Management
 - **AI API cost tracking** with per-token pricing models
 - **Infrastructure cost monitoring** via AWS Cost Explorer
 - **Cost anomaly detection** with statistical analysis
 - **Budget management** with configurable alerts
 - **Automated optimization** recommendations
 
-### 🔄 **Disaster Recovery**
+### Disaster Recovery
 - **Automated backups** (full, incremental, transaction log)
 - **Cross-region replication** with S3 storage
 - **Point-in-time recovery** with RTO/RPO targets
@@ -61,7 +61,7 @@
 
 ---
 
-## 🚀 **Technology Stack**
+## Technology Stack
 
 ### **Backend Services**
 ```yaml
@@ -101,13 +101,13 @@ License Compliance: Automated validation
 
 ---
 
-## 🚀 **Live Deployment**
+## Live Deployment
 
 ### **Production URLs**
-- **🌐 Live Demo**: [https://sql-genius.vercel.app](https://sql-genius.vercel.app)
-- **📊 Metrics Dashboard**: [https://sql-genius.vercel.app/metrics](https://sql-genius.vercel.app/metrics)
-- **🔧 API Backend**: [https://sql-genius-api.onrender.com](https://sql-genius-api.onrender.com)
-- **📚 API Documentation**: [https://sql-genius-api.onrender.com/docs](https://sql-genius-api.onrender.com/docs)
+- **Live Demo**: [https://sql-genius.vercel.app](https://sql-genius.vercel.app)
+- **Metrics Dashboard**: [https://sql-genius.vercel.app/metrics](https://sql-genius.vercel.app/metrics)
+- **API Backend**: [https://sql-genius-api.onrender.com](https://sql-genius-api.onrender.com)
+- **API Documentation**: [https://sql-genius-api.onrender.com/docs](https://sql-genius-api.onrender.com/docs)
 
 ### **Quick Deploy**
 
@@ -133,39 +133,50 @@ npx vercel --prod
 - **Schema Templates**: E-commerce, SaaS, Healthcare, Financial
 - **Sandboxed Execution**: Safe query testing environment
 
+### **Verify Deploy**
+```bash
+# Check API health
+curl -sSf https://sql-genius-api.onrender.com/health
+
+# View API documentation
+curl -sSf https://sql-genius-api.onrender.com/docs
+```
+
+For detailed deployment instructions, see the [render.yaml](render.yaml) Blueprint configuration.
+
 ---
 
-## 🏢 **Enterprise Features**
+## Enterprise Features
 
-### 🔐 **Unified Authentication Service**
+### Unified Authentication Service
 - **JWT with RSA rotation** - Automatic key rotation every 24 hours
 - **Multi-factor authentication** - TOTP, SMS, email, backup codes
 - **Single Sign-On (SSO)** - SAML 2.0 and OpenID Connect
 - **Service mesh auth** - mTLS between microservices
 - **Session management** - Redis-based with automatic cleanup
 
-### 📈 **Advanced SQL Engine**
+### Advanced SQL Engine
 - **Multi-step reasoning** - Complex query decomposition
 - **Validation pipeline** - Syntax and semantic checking
 - **Security scanning** - SQL injection prevention
 - **Query sandboxing** - Isolated execution environment
 - **Performance optimization** - Automatic query tuning
 
-### 🏗️ **Multi-Tenant Architecture**
+### Multi-Tenant Architecture
 - **Database isolation** - Database-per-tenant pattern
 - **Dynamic routing** - Tenant-aware request routing
 - **Resource quotas** - Per-tenant limits and throttling
 - **Usage metering** - Detailed consumption tracking
 - **Billing integration** - Stripe subscription management
 
-### 🧠 **Business Intelligence**
+### Business Intelligence
 - **Automated insights** - AI-powered data analysis
 - **Anomaly detection** - Statistical outlier identification
 - **Natural language reporting** - Executive summaries
 - **Predictive analytics** - Trend forecasting
 - **Custom dashboards** - Real-time visualizations
 
-### 🔍 **Intelligent Caching**
+### Intelligent Caching
 - **Semantic similarity** - Vector-based query matching
 - **TTL optimization** - Dynamic cache expiration
 - **Distributed cache** - Redis cluster support
@@ -174,7 +185,7 @@ npx vercel --prod
 
 ---
 
-## 🛠️ **Development Setup**
+## Development Setup
 
 ### **Prerequisites**
 ```bash
@@ -222,7 +233,7 @@ AWS_SECRET_ACCESS_KEY=your_aws_secret
 
 ---
 
-## 🚦 **CI/CD Pipeline**
+## CI/CD Pipeline
 
 ### **Security Scanning**
 - **Secret detection** - TruffleHog for exposed secrets
@@ -247,7 +258,7 @@ AWS_SECRET_ACCESS_KEY=your_aws_secret
 
 ---
 
-## 📊 **Monitoring & Observability**
+## Monitoring & Observability
 
 ### **Metrics & Dashboards**
 ```yaml
@@ -285,7 +296,7 @@ Warning Alerts:
 
 ---
 
-## 💰 **Cost Management**
+## Cost Management
 
 ### **FinOps Features**
 - **Real-time cost tracking** - Per-tenant consumption
@@ -313,7 +324,7 @@ Infrastructure Costs:
 
 ---
 
-## 🔧 **API Documentation**
+## API Documentation
 
 ### **Authentication Endpoints**
 ```python
@@ -344,7 +355,7 @@ GET /docs                # OpenAPI documentation
 
 ---
 
-## 🏗️ **Architecture Diagrams**
+## Architecture Diagrams
 
 ### **System Architecture**
 ```mermaid
@@ -388,7 +399,7 @@ sequenceDiagram
 
 ---
 
-## 📈 **Performance Benchmarks**
+## Performance Benchmarks
 
 ### **API Performance**
 ```yaml
@@ -422,7 +433,7 @@ Resource Efficiency:
 
 ---
 
-## 🔒 **Security & Compliance**
+## Security & Compliance
 
 ### **Security Controls**
 - **Authentication**: JWT with RSA256, MFA required
@@ -440,7 +451,7 @@ Resource Efficiency:
 
 ---
 
-## 🚀 **Deployment**
+## Deployment
 
 ### **Production Deployment**
 ```bash
@@ -477,7 +488,7 @@ kubectl logs -f deployment/sqlgenius-api -n production
 
 ---
 
-## 📋 **Contributing**
+## Contributing
 
 ### **Development Guidelines**
 - **Code Style**: Black formatting, PEP 8 compliance
@@ -497,21 +508,21 @@ kubectl logs -f deployment/sqlgenius-api -n production
 
 ---
 
-## 📄 **License**
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🌟 **Enterprise Support**
+## Enterprise Support
 
 <div align="center">
 
 ### **Production-Ready SaaS Platform**
 
-[![🚀 PRODUCTION READY](https://img.shields.io/badge/🚀_PRODUCTION-READY-success?style=for-the-badge&logo=rocket)](https://github.com/cbratkovics/sql-genius-ai)
+[![PRODUCTION READY](https://img.shields.io/badge/PRODUCTION-READY-success?style=for-the-badge&logo=rocket)](https://github.com/cbratkovics/sql-genius-ai)
 
-[![🏢 ENTERPRISE GRADE](https://img.shields.io/badge/🏢_ENTERPRISE-GRADE-blue?style=for-the-badge&logo=building)](https://github.com/cbratkovics/sql-genius-ai)
+[![ENTERPRISE GRADE](https://img.shields.io/badge/ENTERPRISE-GRADE-blue?style=for-the-badge&logo=building)](https://github.com/cbratkovics/sql-genius-ai)
 
 *Multi-tenant • Secure • Scalable • Observable • Cost-optimized*
 
@@ -519,6 +530,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built by [Christopher Bratkovics](https://github.com/cbratkovics)**
 
-⭐ **Star this repo to support enterprise-grade open source!** ⭐
+**Star this repo to support enterprise-grade open source!**
 
 </div>

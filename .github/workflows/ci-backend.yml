@@ -1,0 +1,23 @@
+name: Backend CI
+on:
+  pull_request:
+    paths: ["backend/**", ".github/workflows/ci-backend.yml"]
+  push:
+    branches: [main]
+    paths: ["backend/**", ".github/workflows/ci-backend.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -r ../requirements.txt
+      - run: pip install ruff isort pytest mypy
+      - run: ruff check .
+      - run: isort --check-only .
+      - run: mypy --install-types --non-interactive || true
+      - run: pytest -q

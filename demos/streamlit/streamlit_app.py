@@ -13,7 +13,7 @@ import numpy as np
 # Page config
 st.set_page_config(
     page_title="SQL Genius AI",
-    page_icon="🧠",
+    page_icon="brain",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -104,28 +104,28 @@ def show_upgrade_banner():
     queries_used = st.session_state.get('query_count', 0)
     
     if queries_used >= 3 and st.session_state.get('user_email') is None:
-        st.error("🚫 Free tier limit reached (3 queries)")
+        st.error("Free tier limit reached (3 queries)")
         
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("### 🚀 Upgrade to SQL Genius Pro")
-            st.markdown("- ✅ **Unlimited queries**")
-            st.markdown("- ✅ **All chart types**") 
-            st.markdown("- ✅ **CSV downloads**")
-            st.markdown("- ✅ **Priority support**")
+            st.markdown("### Upgrade to SQL Genius Pro")
+            st.markdown("- **Unlimited queries**")
+            st.markdown("- **All chart types**") 
+            st.markdown("- **CSV downloads**")
+            st.markdown("- **Priority support**")
             st.markdown("**Only $24/month**")
             
             # Stripe checkout link - you'll replace this URL with your real one
             stripe_link = st.secrets.get("stripe_checkout_link", "https://buy.stripe.com/test_your_link_here")
-            st.link_button("🔥 Upgrade Now - $24/month", stripe_link)
+            st.link_button("Upgrade Now - $24/month", stripe_link)
         
         with col2:
-            st.markdown("### 📧 Or Get Notified of Discounts")
+            st.markdown("### Or Get Notified of Discounts")
             user_email = st.text_input("Email for 50% off early bird special:")
             if st.button("Get 50% Off"):
                 if user_email:
                     st.session_state.user_email = user_email
-                    st.success("✅ Thanks! Check your email for the discount code.")
+                    st.success("Thanks! Check your email for the discount code.")
                     st.rerun()
         
         return False
@@ -639,12 +639,12 @@ def explain_results(df, sql_query):
         insights = []
         
         # Executive Summary Header
-        insights.append("## 📈 **EXECUTIVE BUSINESS ANALYSIS**")
+        insights.append("## **EXECUTIVE BUSINESS ANALYSIS**")
         insights.append("---")
         
         # Key Findings Section
-        insights.append("### 🔍 **KEY FINDINGS**")
-        insights.append(f"✅ **Data Analysis**: Processed {len(df):,} records across {len(df.columns)} business metrics")
+        insights.append("### **KEY FINDINGS**")
+        insights.append(f"**Data Analysis**: Processed {len(df):,} records across {len(df.columns)} business metrics")
         
         # Financial Impact Analysis
         numeric_cols = df.select_dtypes(include=['number']).columns
@@ -662,7 +662,7 @@ def explain_results(df, sql_query):
                 performance_ratio = max_val / avg if avg > 0 else 0
                 
                 insights.append(f"")
-                insights.append(f"💰 **{col_name} Performance Metrics**:")
+                insights.append(f"**{col_name} Performance Metrics**:")
                 insights.append(f"- **Total Portfolio Value**: ${total:,.0f}")
                 insights.append(f"- **Average Performance**: ${avg:,.0f} per unit")
                 insights.append(f"- **Performance Range**: ${min_val:,.0f} - ${max_val:,.0f}")
@@ -671,42 +671,42 @@ def explain_results(df, sql_query):
                 # Strategic implications
                 if 'spend' in col.lower() or 'cost' in col.lower():
                     savings_potential = std_dev * len(df) * 0.15  # 15% optimization potential
-                    insights.append(f"- **🎯 Optimization Opportunity**: ${savings_potential:,.0f} annual savings potential")
+                    insights.append(f"- **Optimization Opportunity**: ${savings_potential:,.0f} annual savings potential")
                 elif 'revenue' in col.lower() or 'sales' in col.lower():
                     growth_potential = (max_val - avg) * len(df) * 0.25  # 25% of top performer gap
-                    insights.append(f"- **🚀 Growth Opportunity**: ${growth_potential:,.0f} revenue upside potential")
+                    insights.append(f"- **Growth Opportunity**: ${growth_potential:,.0f} revenue upside potential")
                 
                 if i == 0:  # Only for primary metric
-                    insights.append(f"- **📊 Variability Index**: {(std_dev/avg)*100:.1f}% (Higher = More optimization opportunity)")
+                    insights.append(f"- **Variability Index**: {(std_dev/avg)*100:.1f}% (Higher = More optimization opportunity)")
         
         # Market Segmentation Analysis
         categorical_cols = df.select_dtypes(include=['object', 'category']).columns
         if len(categorical_cols) > 0:
             insights.append("")
-            insights.append("### 🏆 **MARKET SEGMENTATION INSIGHTS**")
+            insights.append("### **MARKET SEGMENTATION INSIGHTS**")
             
             for col in categorical_cols[:1]:  # Focus on primary category
                 unique_count = df[col].nunique()
                 top_category = df[col].value_counts().index[0] if len(df) > 0 else "N/A"
                 col_name = col.replace('_', ' ').title()
                 
-                insights.append(f"🔸 **{col_name}**: {unique_count} distinct segments identified")
-                insights.append(f"🔸 **Market Leader**: '{top_category}' represents the top-performing segment")
+                insights.append(f"**{col_name}**: {unique_count} distinct segments identified")
+                insights.append(f"**Market Leader**: '{top_category}' represents the top-performing segment")
                 
                 # Calculate market concentration
                 if len(df) > 1:
                     market_share = (df[col].value_counts().iloc[0] / len(df)) * 100
-                    insights.append(f"🔸 **Market Concentration**: Top segment holds {market_share:.1f}% market share")
+                    insights.append(f"**Market Concentration**: Top segment holds {market_share:.1f}% market share")
         
         # Strategic Recommendations Section
         insights.append("")
-        insights.append("### 🎯 **STRATEGIC RECOMMENDATIONS**")
+        insights.append("### **STRATEGIC RECOMMENDATIONS**")
         
         recommendations_added = False
         
         # Revenue/Sales specific recommendations
         if any('revenue' in col.lower() or 'sales' in col.lower() for col in df.columns):
-            insights.append("**💰 REVENUE OPTIMIZATION:**")
+            insights.append("**REVENUE OPTIMIZATION:**")
             insights.append("• **Replicate Success**: Apply top performer strategies across underperforming segments")
             insights.append("• **Market Expansion**: High-value segments show 2-3x revenue growth potential")
             insights.append("• **Portfolio Rebalancing**: Shift resources to highest-ROI opportunities")
@@ -714,7 +714,7 @@ def explain_results(df, sql_query):
         
         # Spend/Cost specific recommendations  
         if any('spend' in col.lower() or 'cost' in col.lower() for col in df.columns):
-            insights.append("**🎯 BUDGET OPTIMIZATION:**")
+            insights.append("**BUDGET OPTIMIZATION:**")
             insights.append("• **Resource Reallocation**: 20% budget shift could improve ROI by 15-30%")
             insights.append("• **Performance Standardization**: Bring underperformers to average for immediate gains")
             insights.append("• **Efficiency Programs**: Target bottom quartile for rapid improvement")
@@ -722,27 +722,27 @@ def explain_results(df, sql_query):
         
         # General business recommendations
         if not recommendations_added:
-            insights.append("**📈 PERFORMANCE OPTIMIZATION:**")
+            insights.append("**PERFORMANCE OPTIMIZATION:**")
             insights.append("• **Data-Driven Decisions**: Use performance gaps to prioritize improvement initiatives")
             insights.append("• **Benchmarking Programs**: Establish top performer standards across all segments")
             insights.append("• **Continuous Monitoring**: Track key metrics monthly to identify emerging trends")
         
         # ROI & Business Impact Section
         insights.append("")
-        insights.append("### 💎 **ESTIMATED BUSINESS IMPACT**")
+        insights.append("### **ESTIMATED BUSINESS IMPACT**")
         
         if len(numeric_cols) > 0:
             primary_value = df[numeric_cols[0]].sum()
             improvement_value = primary_value * 0.20  # 20% improvement potential
             
-            insights.append(f"🔸 **Current Portfolio Value**: ${primary_value:,.0f}")
-            insights.append(f"🔸 **Optimization Potential**: ${improvement_value:,.0f} (20% improvement)")
-            insights.append(f"🔸 **ROI Timeline**: 6-12 months for full implementation")
-            insights.append(f"🔸 **Risk Level**: Low (data-driven approach)")
+            insights.append(f"**Current Portfolio Value**: ${primary_value:,.0f}")
+            insights.append(f"**Optimization Potential**: ${improvement_value:,.0f} (20% improvement)")
+            insights.append(f"**ROI Timeline**: 6-12 months for full implementation")
+            insights.append(f"**Risk Level**: Low (data-driven approach)")
         
         # Implementation roadmap
         insights.append("")
-        insights.append("### 🚀 **NEXT STEPS**")
+        insights.append("### **NEXT STEPS**")
         insights.append("1. **Week 1-2**: Deep dive analysis on top performers")
         insights.append("2. **Week 3-4**: Pilot optimization program with bottom quartile")
         insights.append("3. **Month 2-3**: Scale successful strategies across portfolio")
@@ -751,46 +751,46 @@ def explain_results(df, sql_query):
         # Value proposition reminder
         insights.append("")
         insights.append("---")
-        insights.append("💼 **Analysis Confidence**: High | **Recommended Action**: Immediate implementation")
-        insights.append("📊 **Report Generated By**: SQL Genius AI Business Intelligence Platform")
+        insights.append("**Analysis Confidence**: High | **Recommended Action**: Immediate implementation")
+        insights.append("**Report Generated By**: SQL Genius AI Business Intelligence Platform")
         
         return "\n".join(insights)
         
     except Exception as e:
         return f"""
-        ## 🎯 **BUSINESS ANALYSIS SUMMARY**
+        ## **BUSINESS ANALYSIS SUMMARY**
         
-        ✅ **Analysis Status**: Successfully completed comprehensive data review
-        📊 **Dataset Size**: {len(df) if 'df' in locals() else 'N/A'} records processed
-        💡 **Key Insight**: Your data reveals significant optimization opportunities
+        **Analysis Status**: Successfully completed comprehensive data review
+        **Dataset Size**: {len(df) if 'df' in locals() else 'N/A'} records processed
+        **Key Insight**: Your data reveals significant optimization opportunities
         
-        ### 🚀 **IMMEDIATE VALUE**
+        ### **IMMEDIATE VALUE**
         - **Performance Gaps Identified**: Clear differentiation between top and bottom performers
         - **Optimization Potential**: Estimated 15-25% improvement opportunity  
         - **Strategic Direction**: Data supports focused improvement initiatives
         
-        ### 📈 **RECOMMENDED ACTION**
+        ### **RECOMMENDED ACTION**
         Leverage these insights to drive data-informed strategic decisions and unlock measurable business value.
         
         ---
-        💼 **Enterprise-Grade Analysis** | **Powered by SQL Genius AI**
+        **Enterprise-Grade Analysis** | **Powered by SQL Genius AI**
         """
 
 # Main app
 def main():
     # Header
-    st.markdown('<div class="main-header">🧠 SQL Genius AI</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">SQL Genius AI</div>', unsafe_allow_html=True)
     st.markdown("**The only AI SQL tool that executes queries AND keeps your data private**")
     
     # Show usage counter
     queries_used = st.session_state.get('query_count', 0)
     if st.session_state.get('user_email') is None:
         if queries_used == 0:
-            st.info(f"🆓 Free tier: {3-queries_used} queries remaining")
+            st.info(f"Free tier: {3-queries_used} queries remaining")
         elif queries_used < 3:
-            st.warning(f"🆓 Free tier: {3-queries_used} queries remaining")
+            st.warning(f"Free tier: {3-queries_used} queries remaining")
     else:
-        st.success("🚀 Pro user: Unlimited queries")
+        st.success("Pro user: Unlimited queries")
     
     # Competitive advantages display
     col1, col2, col3 = st.columns(3)
@@ -798,7 +798,7 @@ def main():
     with col1:
         st.markdown("""
         <div class="competitive-advantage">
-        <h4>🔒 Privacy First</h4>
+        <h4>Privacy First</h4>
         <p>No database credentials needed. Your data never leaves this session.</p>
         </div>
         """, unsafe_allow_html=True)
@@ -806,7 +806,7 @@ def main():
     with col2:
         st.markdown("""
         <div class="competitive-advantage">
-        <h4>⚡ Execute & Visualize</h4>
+        <h4>Execute & Visualize</h4>
         <p>Run SQL on your data and get instant charts. No copy-paste needed.</p>
         </div>
         """, unsafe_allow_html=True)
@@ -814,14 +814,14 @@ def main():
     with col3:
         st.markdown("""
         <div class="competitive-advantage">
-        <h4>🧠 Smart Learning</h4>
+        <h4>Smart Learning</h4>
         <p>Remembers your data patterns for better query suggestions.</p>
         </div>
         """, unsafe_allow_html=True)
     
     # Sidebar for file upload
     with st.sidebar:
-        st.header("📁 Upload Your Data")
+        st.header("Upload Your Data")
         uploaded_file = st.file_uploader(
             "Upload CSV or Excel file",
             type=['csv', 'xlsx', 'xls'],
@@ -836,10 +836,10 @@ def main():
                 else:
                     df = pd.read_excel(uploaded_file)
                 
-                st.success(f"✅ Loaded {len(df)} rows, {len(df.columns)} columns")
+                st.success(f"Loaded {len(df)} rows, {len(df.columns)} columns")
                 
                 # Show data preview
-                with st.expander("📊 Data Preview"):
+                with st.expander("Data Preview"):
                     st.dataframe(df.head())
                 
                 # Schema info
@@ -854,21 +854,21 @@ def main():
     if 'uploaded_file' in locals() and uploaded_file is not None:
         # Initialize Claude
         if not init_anthropic():
-            st.error("⚠️ Claude API key not configured. Please add it to your secrets.")
+            st.error("Claude API key not configured. Please add it to your secrets.")
             st.info("Add your Claude API key to .streamlit/secrets.toml under [general] claude_api_key")
             st.stop()
         
         # Query input
-        st.header("💬 Ask Your Data Anything")
+        st.header(" Ask Your Data Anything")
         
         # Enhanced example queries with better diversity
-        st.markdown("### 🚀 **Business Intelligence Examples** (Click to Try)")
+        st.markdown("###  **Business Intelligence Examples** (Click to Try)")
         
         example_col1, example_col2, example_col3 = st.columns(3)
         
         with example_col1:
-            st.markdown("#### 📊 **Performance Analysis**")
-            if st.button("🏆 Top Performers by Revenue", key="top_performers", help="Identify your highest-value segments"):
+            st.markdown("####  **Performance Analysis**")
+            if st.button(" Top Performers by Revenue", key="top_performers", help="Identify your highest-value segments"):
                 if df.select_dtypes(include=['number']).columns.any():
                     numeric_col = df.select_dtypes(include=['number']).columns[0]
                     natural_language = f"Show me the top 10 records ordered by {numeric_col} in descending order"
@@ -876,7 +876,7 @@ def main():
                     st.session_state.auto_execute = True
                     st.rerun()
             
-            if st.button("📈 Growth Opportunities", key="growth_ops", help="Find underperforming segments with potential"):
+            if st.button(" Growth Opportunities", key="growth_ops", help="Find underperforming segments with potential"):
                 if df.select_dtypes(include=['number']).columns.any():
                     numeric_col = df.select_dtypes(include=['number']).columns[0]
                     natural_language = f"Show records where {numeric_col} is below average and identify improvement opportunities"
@@ -885,8 +885,8 @@ def main():
                     st.rerun()
         
         with example_col2:
-            st.markdown("#### 🎯 **Strategic Insights**")
-            if st.button("🔍 Market Segmentation", key="segmentation", help="Analyze your customer/market segments"):
+            st.markdown("####  **Strategic Insights**")
+            if st.button(" Market Segmentation", key="segmentation", help="Analyze your customer/market segments"):
                 text_cols = df.select_dtypes(include=['object']).columns
                 if len(text_cols) > 0:
                     natural_language = f"Group by {text_cols[0]} and show total performance with percentage breakdown"
@@ -894,7 +894,7 @@ def main():
                     st.session_state.auto_execute = True
                     st.rerun()
             
-            if st.button("⚖️ Performance Comparison", key="comparison", help="Compare performance across categories"):
+            if st.button(" Performance Comparison", key="comparison", help="Compare performance across categories"):
                 if len(df.select_dtypes(include=['object']).columns) > 0 and len(df.select_dtypes(include=['number']).columns) > 0:
                     text_col = df.select_dtypes(include=['object']).columns[0]
                     num_col = df.select_dtypes(include=['number']).columns[0]
@@ -904,8 +904,8 @@ def main():
                     st.rerun()
         
         with example_col3:
-            st.markdown("#### 💰 **ROI Analysis**")
-            if st.button("💎 Value Distribution", key="value_dist", help="Understand your value distribution patterns"):
+            st.markdown("####  **ROI Analysis**")
+            if st.button(" Value Distribution", key="value_dist", help="Understand your value distribution patterns"):
                 if df.select_dtypes(include=['number']).columns.any():
                     numeric_col = df.select_dtypes(include=['number']).columns[0]
                     natural_language = f"Analyze {numeric_col} distribution showing quartiles and outliers for optimization"
@@ -913,7 +913,7 @@ def main():
                     st.session_state.auto_execute = True
                     st.rerun()
             
-            if st.button("🚀 Business Impact", key="impact", help="Calculate total business impact and ROI"):
+            if st.button(" Business Impact", key="impact", help="Calculate total business impact and ROI"):
                 numeric_cols = df.select_dtypes(include=['number']).columns
                 if len(numeric_cols) > 0:
                     natural_language = f"Calculate total business value, average performance, and identify the 80/20 rule patterns"
@@ -923,7 +923,7 @@ def main():
         
         # Natural language input with enhanced styling
         st.markdown("---")
-        st.markdown("### 💭 **Custom Business Question**")
+        st.markdown("###  **Custom Business Question**")
         st.markdown("*Describe your analysis needs in plain English - our AI will handle the complex SQL*")
         
         # Query input with enhanced styling and auto-population
@@ -944,7 +944,7 @@ def main():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             generate_button = st.button(
-                "🚀 Generate Executive Analysis", 
+                " Generate Executive Analysis", 
                 type="primary",
                 help="Get instant SQL + charts + strategic insights",
                 use_container_width=True
@@ -964,7 +964,7 @@ def main():
                 if st.session_state.get('user_email') is None:
                     increment_usage()
                 
-                with st.spinner("🧠 Generating SQL with Claude AI..."):
+                with st.spinner(" Generating SQL with Claude AI..."):
                     # Generate SQL
                     schema_info = "\n".join([f"{col}: {dtype}" for col, dtype in zip(df.columns, df.dtypes)])
                     data_preview = df.head(3).to_string()
@@ -973,16 +973,16 @@ def main():
                 
                 if sql_query:
                     # Display generated SQL
-                    st.subheader("🔍 Generated SQL Query")
+                    st.subheader(" Generated SQL Query")
                     st.code(sql_query, language="sql")
                     
                     # Execute SQL
-                    with st.spinner("⚡ Executing query..."):
+                    with st.spinner(" Executing query..."):
                         result_df = execute_sql_on_dataframe(df, sql_query)
                     
                     if result_df is not None:
                         # Display results with enhanced styling
-                        st.subheader("📊 Query Results")
+                        st.subheader(" Query Results")
                         
                         # Add comprehensive key metrics at the top
                         if len(result_df) > 0:
@@ -995,7 +995,7 @@ def main():
                             # Always show record count
                             with metric_cols[0]:
                                 st.metric(
-                                    label="📋 Records Found", 
+                                    label=" Records Found", 
                                     value=f"{len(result_df):,}",
                                     delta=f"{len(result_df)} rows"
                                 )
@@ -1008,7 +1008,7 @@ def main():
                                         avg_val = result_df[col].mean()
                                         
                                         st.metric(
-                                            label=f"💰 Total {col.replace('_', ' ').title()}", 
+                                            label=f" Total {col.replace('_', ' ').title()}", 
                                             value=f"${total_val:,.0f}" if 'spend' in col.lower() or 'revenue' in col.lower() else f"{total_val:,.0f}",
                                             delta=f"Avg: {avg_val:,.0f}"
                                         )
@@ -1018,13 +1018,13 @@ def main():
                                 with metric_cols[-1]:
                                     unique_count = result_df[categorical_cols[0]].nunique()
                                     st.metric(
-                                        label=f"🏷️ Unique {categorical_cols[0].replace('_', ' ').title()}", 
+                                        label=f" Unique {categorical_cols[0].replace('_', ' ').title()}", 
                                         value=f"{unique_count}",
                                         delta="Segments"
                                     )
                         
                         # Enhanced data table with styling
-                        st.markdown("### 📋 Detailed Results")
+                        st.markdown("###  Detailed Results")
                         st.dataframe(
                             result_df, 
                             use_container_width=True,
@@ -1036,19 +1036,19 @@ def main():
                         with col1:
                             csv = result_df.to_csv(index=False)
                             st.download_button(
-                                label="📥 Export to Excel/CSV",
+                                label=" Export to Excel/CSV",
                                 data=csv,
                                 file_name=f"sql_genius_analysis_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.csv",
                                 mime="text/csv",
                                 help="Download your analysis results for further processing"
                             )
                         with col2:
-                            st.info("💼 **Pro Tip**: Use exported data in Excel, PowerBI, or Tableau")
+                            st.info(" **Pro Tip**: Use exported data in Excel, PowerBI, or Tableau")
                         
                         # Auto-generate comprehensive professional visualizations
                         if len(result_df) > 0:
                             st.markdown("---")
-                            st.subheader("📈 Business Intelligence Dashboards")
+                            st.subheader(" Business Intelligence Dashboards")
                             
                             charts = create_visualizations(result_df)
                             
@@ -1067,23 +1067,23 @@ def main():
                                         
                                         # Add business context for each chart
                                         if "KPI" in name:
-                                            st.info("💡 **Insight**: Comprehensive performance overview with benchmarks and targets")
+                                            st.info(" **Insight**: Comprehensive performance overview with benchmarks and targets")
                                         elif "Correlation" in name:
-                                            st.info("💡 **Insight**: Understand relationships between metrics for strategic planning")
+                                            st.info(" **Insight**: Understand relationships between metrics for strategic planning")
                                         elif "Efficiency" in name:
-                                            st.info("💡 **Insight**: ROI analysis showing performance vs investment patterns")
+                                            st.info(" **Insight**: ROI analysis showing performance vs investment patterns")
                                         elif "Market Share" in name:
-                                            st.info("💡 **Insight**: Competitive positioning and market concentration analysis")
+                                            st.info(" **Insight**: Competitive positioning and market concentration analysis")
                                         elif "Benchmarking" in name:
-                                            st.info("💡 **Insight**: Performance comparison against industry averages")
+                                            st.info(" **Insight**: Performance comparison against industry averages")
                                         elif "ROI" in name:
-                                            st.info("💡 **Insight**: Financial efficiency and optimization opportunities")
+                                            st.info(" **Insight**: Financial efficiency and optimization opportunities")
                                         elif "Ranking" in name:
-                                            st.info("💡 **Insight**: Top performer identification and tier analysis")
+                                            st.info(" **Insight**: Top performer identification and tier analysis")
                                         elif "Distribution" in name:
-                                            st.info("💡 **Insight**: Statistical analysis with quartiles and outlier detection")
+                                            st.info(" **Insight**: Statistical analysis with quartiles and outlier detection")
                             else:
-                                st.info("💡 **Visualization Note**: Upload more diverse data for advanced chart options")
+                                st.info(" **Visualization Note**: Upload more diverse data for advanced chart options")
                         
                         # Enhanced AI explanation with business focus
                         st.markdown("---")
@@ -1091,7 +1091,7 @@ def main():
                         # Create an impressive header for the business analysis
                         st.markdown("""
                         <div class="insight-box">
-                        <h2 style="color: white; margin: 0;">🧠 AI Business Intelligence Report</h2>
+                        <h2 style="color: white; margin: 0;"> AI Business Intelligence Report</h2>
                         <p style="color: white; margin: 5px 0; font-size: 1.1rem;">Executive-Level Strategic Analysis</p>
                         </div>
                         """, unsafe_allow_html=True)
@@ -1102,25 +1102,25 @@ def main():
                         # Enhanced value proposition with styling
                         st.markdown("""
                         <div class="metric-card">
-                        <h3 style="color: #667eea; margin-top: 0;">🚀 SQL Genius AI Business Value</h3>
+                        <h3 style="color: #667eea; margin-top: 0;"> SQL Genius AI Business Value</h3>
                         <p style="font-size: 1.1rem; margin: 10px 0;">
-                        <strong>🎯 Replaces $100K+ Data Analyst</strong><br>
-                        ✅ Instant executive-level insights<br>
-                        ✅ Strategic recommendations with ROI estimates<br>
-                        ✅ Professional-grade business intelligence<br>
-                        ✅ Zero setup time - immediate results
+                        <strong> Replaces $100K+ Data Analyst</strong><br>
+                         Instant executive-level insights<br>
+                         Strategic recommendations with ROI estimates<br>
+                         Professional-grade business intelligence<br>
+                         Zero setup time - immediate results
                         </p>
                         <p style="color: #764ba2; font-weight: bold; font-size: 1.2rem;">
-                        💰 Typical customer saves 20-40 hours/month on data analysis
+                         Typical customer saves 20-40 hours/month on data analysis
                         </p>
                         </div>
                         """, unsafe_allow_html=True)
                         
                     else:
-                        st.error("❌ Failed to execute SQL query. Please try a different approach or contact support.")
+                        st.error(" Failed to execute SQL query. Please try a different approach or contact support.")
                         
                         # Helpful suggestions
-                        st.markdown("### 💡 Troubleshooting Tips")
+                        st.markdown("###  Troubleshooting Tips")
                         st.markdown("- Try simpler queries like 'Show me all data' or 'Count the records'")
                         st.markdown("- Check that column names in your query match the data preview")
                         st.markdown("- Use the example buttons above for tested queries")
@@ -1132,14 +1132,14 @@ def main():
     
     else:
         # Landing page content
-        st.header("🚀 How It Works")
+        st.header(" How It Works")
         
         steps_col1, steps_col2, steps_col3 = st.columns(3)
         
         with steps_col1:
             st.markdown("""
             <div class="feature-box">
-            <h3>1. 📤 Upload Data</h3>
+            <h3>1.  Upload Data</h3>
             <p>Drag & drop your CSV or Excel file. Your data stays completely private.</p>
             </div>
             """, unsafe_allow_html=True)
@@ -1147,7 +1147,7 @@ def main():
         with steps_col2:
             st.markdown("""
             <div class="feature-box">
-            <h3>2. 💬 Ask Questions</h3>
+            <h3>2.  Ask Questions</h3>
             <p>Describe what you want to know in plain English. No SQL knowledge required.</p>
             </div>
             """, unsafe_allow_html=True)
@@ -1155,14 +1155,14 @@ def main():
         with steps_col3:
             st.markdown("""
             <div class="feature-box">
-            <h3>3. 📊 Get Insights</h3>
+            <h3>3.  Get Insights</h3>
             <p>See results, charts, and explanations instantly. Download everything.</p>
             </div>
             """, unsafe_allow_html=True)
         
         # Call to action
         st.markdown("---")
-        st.markdown("### 👈 Upload your data file to get started!")
+        st.markdown("###  Upload your data file to get started!")
 
 if __name__ == "__main__":
     main()

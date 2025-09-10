@@ -162,14 +162,14 @@ def generate_compliance_report(results: Dict[str, List[Dict]]) -> None:
     
     # Approved licenses
     approved_count = len(results['approved'])
-    print(f"\n✅ APPROVED LICENSES ({approved_count} packages):")
+    print(f"\nAPPROVED LICENSES ({approved_count} packages):")
     for package in sorted(results['approved'], key=lambda x: x['name']):
         print(f"  - {package['name']} ({package['version']}): {package['license']}")
     
     # Copyleft licenses (require attention)
     copyleft_count = len(results['copyleft'])
     if copyleft_count > 0:
-        print(f"\n⚠️  COPYLEFT LICENSES ({copyleft_count} packages) - REVIEW REQUIRED:")
+        print(f"\nCOPYLEFT LICENSES ({copyleft_count} packages) - REVIEW REQUIRED:")
         for package in sorted(results['copyleft'], key=lambda x: x['name']):
             print(f"  - {package['name']} ({package['version']}): {package['license']}")
         print("\n  NOTE: Copyleft licenses may require special handling for commercial use.")
@@ -177,7 +177,7 @@ def generate_compliance_report(results: Dict[str, List[Dict]]) -> None:
     # Unknown licenses
     unknown_count = len(results['unknown'])
     if unknown_count > 0:
-        print(f"\n❓ UNKNOWN LICENSES ({unknown_count} packages) - REVIEW REQUIRED:")
+        print(f"\nUNKNOWN LICENSES ({unknown_count} packages) - REVIEW REQUIRED:")
         for package in sorted(results['unknown'], key=lambda x: x['name']):
             print(f"  - {package['name']} ({package['version']}): {package['license']}")
         print("\n  ACTION: Review these licenses manually and update the approved list.")
@@ -185,7 +185,7 @@ def generate_compliance_report(results: Dict[str, List[Dict]]) -> None:
     # Forbidden licenses
     forbidden_count = len(results['forbidden'])
     if forbidden_count > 0:
-        print(f"\n❌ FORBIDDEN LICENSES ({forbidden_count} packages) - ACTION REQUIRED:")
+        print(f"\nFORBIDDEN LICENSES ({forbidden_count} packages) - ACTION REQUIRED:")
         for package in sorted(results['forbidden'], key=lambda x: x['name']):
             print(f"  - {package['name']} ({package['version']}): {package['license']}")
         print("\n  ACTION: Remove these packages or find alternatives with approved licenses.")
@@ -205,15 +205,15 @@ def generate_license_matrix() -> None:
     print("LICENSE COMPATIBILITY MATRIX")
     print("="*60)
     
-    print("\n✅ APPROVED FOR COMMERCIAL USE:")
+    print("\nAPPROVED FOR COMMERCIAL USE:")
     for license_name in sorted(APPROVED_LICENSES):
         print(f"  - {license_name}")
     
-    print("\n⚠️  COPYLEFT (Special Handling Required):")
+    print("\nCOPYLEFT (Special Handling Required):")
     for license_name in sorted(COPYLEFT_LICENSES):
         print(f"  - {license_name}")
     
-    print("\n❌ FORBIDDEN:")
+    print("\nFORBIDDEN:")
     for license_name in sorted(FORBIDDEN_LICENSES):
         print(f"  - {license_name}")
 
@@ -285,9 +285,9 @@ def main():
         logger.warning(f"Found {len(results['copyleft'])} packages with copyleft licenses - review required")
     
     if exit_code == 0:
-        logger.info("✅ License compliance check PASSED")
+        logger.info("License compliance check PASSED")
     else:
-        logger.error("❌ License compliance check FAILED")
+        logger.error("License compliance check FAILED")
     
     sys.exit(exit_code)
 
