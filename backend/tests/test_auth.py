@@ -1,7 +1,4 @@
-import pytest
 from httpx import AsyncClient
-from backend.models.user import User
-from backend.models.tenant import Tenant
 
 
 class TestAuth:

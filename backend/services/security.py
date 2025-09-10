@@ -1,13 +1,8 @@
 import hashlib
-import hmac
 import secrets
-import re
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import pandas as pd
-import numpy as np
 from enum import Enum
 import logging
 from backend.core.config import settings
@@ -53,7 +48,7 @@ class DataSecurityService:
         try:
             if tenant_key:
                 # Use tenant-specific encryption
-                key = hashlib.sha256(tenant_key.encode()).digest()[:32]
+                hashlib.sha256(tenant_key.encode()).digest()[:32]
                 f = Fernet(Fernet.generate_key())  # Would use derived key in production
             else:
                 f = self.fernet
@@ -70,7 +65,7 @@ class DataSecurityService:
         try:
             if tenant_key:
                 # Use tenant-specific decryption
-                key = hashlib.sha256(tenant_key.encode()).digest()[:32]
+                hashlib.sha256(tenant_key.encode()).digest()[:32]
                 f = Fernet(Fernet.generate_key())  # Would use derived key in production
             else:
                 f = self.fernet

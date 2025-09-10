@@ -1,16 +1,11 @@
-import asyncio
 import re
 import sqlparse
 from typing import Dict, List, Optional, Tuple, Any
 from anthropic import AsyncAnthropic
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 import pandas as pd
 import hashlib
 import json
 from backend.core.config import settings
-from backend.models.query import Query, QueryStatus, QueryType
-from backend.models.file import File
 from backend.services.cache import cache_service
 import logging
 
@@ -143,7 +138,7 @@ Available Schema:
             prompt += f"\nContext: {json.dumps(context, indent=2)}"
         
         if previous_queries:
-            prompt += f"\nPrevious queries in this session:\n"
+            prompt += "\nPrevious queries in this session:\n"
             for pq in previous_queries[-3:]:  # Last 3 queries for context
                 prompt += f"- {pq.get('natural_language_query', '')}\n"
         
@@ -270,7 +265,7 @@ Important: Only return valid {dialect.upper()} syntax. No placeholders or pseudo
         
         try:
             # Parse SQL for syntax validation
-            parsed = sqlparse.parse(sql)[0]
+            sqlparse.parse(sql)[0]
             validation_metadata["syntax_valid"] = True
             
             # Calculate complexity score

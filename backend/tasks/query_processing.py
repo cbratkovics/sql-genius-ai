@@ -1,6 +1,6 @@
-from celery import current_task
 from backend.core.celery_app import celery_app
 from backend.core.database import AsyncSessionLocal
+from backend.core.config import settings
 from backend.models.query import Query, QueryStatus
 from backend.models.file import File
 from backend.services.sql_generation import sql_generation_engine
@@ -10,7 +10,7 @@ from backend.services.cache import cache_service
 import pandas as pd
 import asyncio
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 import traceback
 
 logger = logging.getLogger(__name__)

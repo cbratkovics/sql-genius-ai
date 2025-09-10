@@ -26,18 +26,18 @@ celery_app.conf.update(
         "backend.tasks.query_processing.*": {"queue": "query_processing"},
         "backend.tasks.file_processing.*": {"queue": "file_processing"},
         "backend.tasks.analytics.*": {"queue": "analytics"},
-        "backend.tasks.notifications.*": {"queue": notifications"},
+        "backend.tasks.notifications.*": {"queue": "notifications"},
         "backend.tasks.maintenance.*": {"queue": "maintenance"}
     },
     
     # Queue definitions
-    task_queues=(
+    task_queues=[
         Queue("query_processing", routing_key="query_processing"),
         Queue("file_processing", routing_key="file_processing"), 
         Queue("analytics", routing_key="analytics"),
         Queue("notifications", routing_key="notifications"),
         Queue("maintenance", routing_key="maintenance"),
-    ),
+    ],
     
     # Task settings
     task_serializer="json",
@@ -81,7 +81,7 @@ celery_app.conf.update(
             "schedule": 86400.0,  # Daily
         }
     },
-    beat_scheduler="django_celery_beat.schedulers:DatabaseScheduler",
+    beat_scheduler="django_celery_beat.schedulers:DatabaseScheduler"
 )
 
 # Task priority levels

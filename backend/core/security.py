@@ -5,13 +5,13 @@ from passlib.context import CryptContext
 from cryptography.fernet import Fernet
 import secrets
 import hashlib
+import base64
 from backend.core.config import settings
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Generate a valid Fernet key from the encryption key setting
-import base64
 key_hash = hashlib.sha256(settings.ENCRYPTION_KEY.encode()).digest()
 fernet_key = base64.urlsafe_b64encode(key_hash)
 fernet = Fernet(fernet_key)

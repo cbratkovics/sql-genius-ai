@@ -1,9 +1,8 @@
-import asyncio
 import pyotp
 import qrcode
 import io
 import base64
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List
 import redis.asyncio as redis
 import json
 import secrets

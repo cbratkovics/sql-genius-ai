@@ -61,7 +61,7 @@ async def login(
         return result
     except HTTPException as e:
         raise e
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Login failed"
@@ -84,7 +84,7 @@ async def register(
         return result
     except HTTPException as e:
         raise e
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Registration failed"
@@ -101,7 +101,7 @@ async def verify_email(
         return result
     except HTTPException as e:
         raise e
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Email verification failed"
@@ -116,7 +116,7 @@ async def request_password_reset(
     try:
         result = await auth_service.request_password_reset(db, request.email)
         return result
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Password reset request failed"
@@ -137,7 +137,7 @@ async def reset_password(
         return result
     except HTTPException as e:
         raise e
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Password reset failed"
@@ -154,7 +154,7 @@ async def refresh_token(
         return result
     except HTTPException as e:
         raise e
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token refresh failed"

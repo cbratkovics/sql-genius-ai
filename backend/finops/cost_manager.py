@@ -3,12 +3,10 @@ import boto3
 import json
 import logging
 from datetime import datetime, timedelta, date
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
-import pandas as pd
 import numpy as np
-from collections import defaultdict
 import redis.asyncio as redis
 from backend.core.config import settings
 from backend.observability.metrics import metrics_collector

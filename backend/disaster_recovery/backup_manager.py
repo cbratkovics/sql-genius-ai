@@ -4,17 +4,15 @@ import gzip
 import json
 import logging
 import os
-import subprocess
 import tempfile
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
 import hashlib
 import aiofiles
 from botocore.exceptions import NoCredentialsError, ClientError
 import redis.asyncio as redis
-from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import settings
 from backend.core.database import AsyncSessionLocal
 
@@ -351,7 +349,7 @@ class DisasterRecoveryManager:
         
         try:
             # Get WAL files since last backup
-            wal_files = await self._get_wal_files_since(last_backup.timestamp)
+            await self._get_wal_files_since(last_backup.timestamp)
             
             # Archive WAL files
             cmd = [
@@ -404,7 +402,7 @@ class DisasterRecoveryManager:
             # Get current WAL position
             async with AsyncSessionLocal() as db:
                 result = await db.execute("SELECT pg_current_wal_lsn()")
-                current_lsn = result.scalar()
+                result.scalar()
             
             # Create logical backup of recent transactions
             cmd = [

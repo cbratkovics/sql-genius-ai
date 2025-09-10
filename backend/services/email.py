@@ -1,8 +1,7 @@
-import asyncio
 import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import List, Optional
+from typing import Optional
 from backend.core.config import settings
 
 

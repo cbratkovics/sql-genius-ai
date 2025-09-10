@@ -1,13 +1,10 @@
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any
 from scipy import stats
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from anthropic import AsyncAnthropic
-import plotly.graph_objects as go
-import plotly.express as px
-from datetime import datetime, timedelta
 import json
 import logging
 from backend.core.config import settings
@@ -53,7 +50,7 @@ class BusinessIntelligenceEngine:
         query_context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Generate AI-powered executive summary"""
-        data_profile = self._create_data_profile(data)
+        self._create_data_profile(data)
         
         prompt = f"""
 You are a senior business analyst. Analyze this dataset and provide an executive summary.
@@ -331,7 +328,7 @@ Keep it concise and business-focused.
                 try:
                     pd.to_datetime(data[column])
                     date_columns.append(column)
-                except:
+                except (ValueError, TypeError):
                     continue
         
         if not date_columns:

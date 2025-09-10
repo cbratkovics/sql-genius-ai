@@ -1,6 +1,6 @@
 import time
 import asyncio
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Any
 from dataclasses import dataclass, field
 from enum import Enum
 import logging
@@ -8,10 +8,9 @@ from datetime import datetime, timedelta
 import redis.asyncio as redis
 import json
 from prometheus_client import (
-    Counter, Histogram, Gauge, Summary, Info,
-    CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST
+    Counter, Histogram, Gauge, Info,
+    CollectorRegistry, generate_latest
 )
-from contextlib import asynccontextmanager
 import psutil
 import functools
 from backend.core.config import settings

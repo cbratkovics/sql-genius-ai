@@ -2,7 +2,7 @@ import redis.asyncio as redis
 import json
 import pickle
 import hashlib
-from typing import Any, Optional, Union, Dict, List
+from typing import Any, Optional, Dict, List
 from backend.core.config import settings
 import logging
 

@@ -10,7 +10,6 @@ from backend.models.tenant import Tenant, TenantPlan
 from backend.models.user import User, UserRole
 from backend.core.security import get_password_hash, create_access_token
 import uuid
-from datetime import datetime
 
 
 # Test database URL (SQLite in memory)

@@ -1,7 +1,5 @@
 import os
 import json
-import asyncio
-from typing import Optional, Dict, Any
 from anthropic import AsyncAnthropic
 from backend.core.config import settings
 

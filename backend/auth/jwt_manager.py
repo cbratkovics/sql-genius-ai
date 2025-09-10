@@ -1,8 +1,8 @@
 import asyncio
 import jwt
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, List
 from datetime import datetime, timedelta
-from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 import redis.asyncio as redis
@@ -97,7 +97,7 @@ class JWTKeyManager:
         
         # Store current key
         await self.redis_client.setex(
-            f"jwt:current_key", 
+            "jwt:current_key", 
             self.key_retention_period, 
             json.dumps(key_data)
         )

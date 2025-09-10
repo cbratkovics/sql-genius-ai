@@ -1,14 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request, Body
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request, Body
 from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime
 from pydantic import BaseModel, Field
 import asyncio
 import time
 import random
-import hashlib
 import json
-from backend.core.config import settings
 from backend.services.anthropic_service import AnthropicService
 
 router = APIRouter(prefix="/demo", tags=["demo"])
@@ -133,7 +130,7 @@ Format your response as JSON with keys: sql, explanation, assumptions"""
         # Parse response (with fallback for non-JSON responses)
         try:
             response_data = json.loads(result)
-        except:
+        except (json.JSONDecodeError, TypeError):
             # Fallback if response isn't JSON
             response_data = {
                 "sql": result.split("```sql")[1].split("```")[0] if "```sql" in result else result[:200],

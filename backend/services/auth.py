@@ -1,5 +1,5 @@
-from typing import Optional, Any
-from datetime import datetime, timedelta
+from typing import Optional
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from backend.core.security import (
@@ -13,7 +13,6 @@ from backend.core.security import (
     verify_email_verification_token
 )
 from backend.models.user import User
-from backend.models.tenant import Tenant
 from backend.services.user import user_service
 from backend.services.tenant import tenant_service
 from backend.services.email import email_service

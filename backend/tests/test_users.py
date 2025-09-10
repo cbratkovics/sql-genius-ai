@@ -1,4 +1,3 @@
-import pytest
 from httpx import AsyncClient
 
 
@@ -66,7 +65,7 @@ class TestUsers:
         assert response.status_code == 200
         data = response.json()
         assert data["email"] == user_data["email"]
-        assert data["is_verified"] == True  # Admin-created users are auto-verified
+        assert data["is_verified"] is True  # Admin-created users are auto-verified
     
     async def test_create_user_duplicate_email(self, client: AsyncClient, admin_auth_headers, test_user):
         """Test creating user with duplicate email"""

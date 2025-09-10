@@ -2,7 +2,7 @@ import stripe
 from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import settings
-from backend.models.tenant import Tenant, TenantPlan
+from backend.models.tenant import TenantPlan
 from backend.services.tenant import tenant_service
 import logging
 
