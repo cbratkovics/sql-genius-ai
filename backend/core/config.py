@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     )
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ENCRYPTION_KEY: str = os.getenv(
+        "ENCRYPTION_KEY", "default-encryption-key-change-in-production"
+    )
 
     # CORS
     CORS_ORIGINS: List[str] = ["*"]  # Allow all for demo

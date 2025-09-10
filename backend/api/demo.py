@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request, Body
 from fastapi.responses import JSONResponse
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
@@ -222,7 +222,7 @@ async def get_demo_metrics():
     )
 
 @router.post("/execute-sandbox")
-async def execute_in_sandbox(sql: str = Field(..., description="SQL query to execute")):
+async def execute_in_sandbox(sql: str = Body(..., description="SQL query to execute")):
     """
     Execute SQL in a safe sandbox environment.
     Returns mock data for demo purposes.

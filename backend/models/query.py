@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey, JSON, Enum, Index
+from sqlalchemy import Column, String, Text, Integer, Float, Boolean, DateTime, ForeignKey, JSON, Enum, Index
 from sqlalchemy.orm import relationship
 from backend.models.base import Base, TimestampMixin, UUIDMixin, TenantMixin
 import enum

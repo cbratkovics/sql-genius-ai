@@ -7,10 +7,13 @@ from typing import AsyncGenerator
 import asyncio
 
 
+# Use a default SQLite database if DATABASE_URL is not set
+database_url = settings.DATABASE_URL or "sqlite+aiosqlite:///./sql_genius.db"
+
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    database_url,
     echo=False,
-    poolclass=NullPool if "sqlite" in settings.DATABASE_URL else None,
+    poolclass=NullPool if "sqlite" in database_url else None,
     pool_pre_ping=True,
     pool_recycle=300,
 )

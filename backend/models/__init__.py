@@ -3,6 +3,7 @@ from .tenant import Tenant, TenantStatus, TenantPlan
 from .user import User, UserRole
 from .query import Query, SavedQuery, QueryStatus, QueryType
 from .file import File, FileStatus, FileType
+from .audit import AuditLog, AuditEventType, AuditSeverity, APIKey
 
 __all__ = [
     "Base",
@@ -17,5 +18,9 @@ __all__ = [
     "QueryType", 
     "File",
     "FileStatus",
-    "FileType"
+    "FileType",
+    "AuditLog",
+    "AuditEventType",
+    "AuditSeverity",
+    "APIKey"
 ]

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, JSON, Enum
+from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey, JSON, Enum
 from sqlalchemy.orm import relationship
 from backend.models.base import Base, TimestampMixin, UUIDMixin, TenantMixin
 import enum
@@ -49,7 +49,7 @@ class User(Base, UUIDMixin, TimestampMixin, TenantMixin):
     tenant = relationship("Tenant", back_populates="users")
     queries = relationship("Query", back_populates="user", cascade="all, delete-orphan")
     saved_queries = relationship("SavedQuery", back_populates="user", cascade="all, delete-orphan")
-    dashboards = relationship("Dashboard", back_populates="user", cascade="all, delete-orphan")
+    # dashboards = relationship("Dashboard", back_populates="user", cascade="all, delete-orphan")  # Model doesn't exist yet
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user")
     

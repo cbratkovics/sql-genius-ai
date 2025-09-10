@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, DateTime, String, Boolean
+from sqlalchemy import Column, Integer, DateTime, String, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -22,7 +22,7 @@ class TimestampMixin:
 
 
 class TenantMixin:
-    tenant_id = Column(String, nullable=False, index=True)
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=True, index=True)
 
 
 class SoftDeleteMixin:
