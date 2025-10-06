@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { useGenerateSQL, useExecuteSandbox, useSchemaTemplates, useSampleQueries } from '@/hooks/useDemo';
+import type { Schema, SampleQuery } from '@/lib/api';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as Select from '@radix-ui/react-select';
 
@@ -54,8 +55,8 @@ export default function SQLPlayground() {
     await executeSandbox.mutateAsync(generatedSQL);
   };
 
-  const loadSampleQuery = (sample: string) => {
-    setQuery(sample);
+  const loadSampleQuery = (sample: SampleQuery) => {
+    setQuery(sample.query);
   };
 
   return (
@@ -126,7 +127,7 @@ export default function SQLPlayground() {
                         <Select.Portal>
                           <Select.Content className="bg-gray-800 text-white rounded-md shadow-lg">
                             <Select.Viewport>
-                              {schemas?.map((schema: any) => (
+                              {schemas?.map((schema: Schema) => (
                                 <Select.Item
                                   key={schema.name}
                                   value={schema.name}
@@ -260,11 +261,11 @@ export default function SQLPlayground() {
                           </tr>
                         </thead>
                         <tbody>
-                          {executeSandbox.data.sample_results.map((row: any, idx: number) => (
+                          {executeSandbox.data.sample_results.map((row: Record<string, unknown>, idx: number) => (
                             <tr key={idx} className="border-b border-gray-700/50">
-                              {Object.values(row).map((value: any, i: number) => (
+                              {Object.values(row).map((value: unknown, i: number) => (
                                 <td key={i} className="p-2">
-                                  {value}
+                                  {String(value)}
                                 </td>
                               ))}
                             </tr>
@@ -283,7 +284,7 @@ export default function SQLPlayground() {
               {/* Schema Templates Tab */}
               <Tabs.Content value="templates" className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {schemas?.map((schema: any) => (
+                  {schemas?.map((schema: Schema) => (
                     <motion.div
                       key={schema.name}
                       whileHover={{ scale: 1.02 }}
@@ -295,12 +296,12 @@ export default function SQLPlayground() {
                       <div className="space-y-2">
                         <div className="text-gray-500 text-xs uppercase tracking-wide">Tables</div>
                         <div className="flex flex-wrap gap-2">
-                          {schema.tables.map((table: string) => (
+                          {schema.tables.map((table) => (
                             <span
-                              key={table}
+                              key={table.name}
                               className="px-2 py-1 bg-gray-900/50 text-gray-300 rounded text-sm"
                             >
-                              {table}
+                              {table.name}
                             </span>
                           ))}
                         </div>
@@ -312,22 +313,17 @@ export default function SQLPlayground() {
 
               {/* Sample Queries Tab */}
               <Tabs.Content value="samples" className="space-y-6">
-                {sampleQueries && Object.entries(sampleQueries).map(([level, queries]) => (
-                  <div key={level}>
-                    <h3 className="text-white font-semibold text-lg mb-3 capitalize">{level} Queries</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {(queries as string[]).map((sample: string, idx: number) => (
-                        <motion.button
-                          key={idx}
-                          whileHover={{ scale: 1.02 }}
-                          onClick={() => loadSampleQuery(sample)}
-                          className="text-left p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors"
-                        >
-                          <p className="text-gray-300">{sample}</p>
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
+                {sampleQueries && sampleQueries.map((sample, idx) => (
+                  <motion.button
+                    key={idx}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => loadSampleQuery(sample)}
+                    className="text-left p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors mb-3"
+                  >
+                    <h4 className="text-white font-semibold mb-1">{sample.title}</h4>
+                    <p className="text-gray-400 text-sm mb-2">{sample.description}</p>
+                    <p className="text-gray-300 font-mono text-xs">{sample.query}</p>
+                  </motion.button>
                 ))}
               </Tabs.Content>
             </Tabs.Root>

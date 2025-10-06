@@ -30,8 +30,9 @@ export const useGenerateSQL = () => {
         toast.success('SQL generated successfully');
       }
     },
-    onError: (error: any) => {
-      if (error.response?.status === 429) {
+    onError: (error: unknown) => {
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError.response?.status === 429) {
         toast.error('Rate limit exceeded. Please wait a moment.');
       } else {
         toast.error('Failed to generate SQL. Please try again.');

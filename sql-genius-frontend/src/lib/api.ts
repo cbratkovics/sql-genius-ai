@@ -31,10 +31,56 @@ export function withAuth(init?: RequestInit): RequestInit {
   };
 }
 
+// Type definitions
+export interface SQLGenerationResult {
+  success: boolean;
+  sql: string;
+  explanation: string;
+  confidence_score: number;
+  performance: {
+    generation_time_ms: number;
+    tokens_used: number;
+    model: string;
+    cached: boolean;
+  };
+  security: {
+    injection_safe: boolean;
+    validated: boolean;
+    sandbox_tested: boolean;
+  };
+}
+
+export interface SandboxExecuteResult {
+  success: boolean;
+  sample_results: Array<Record<string, unknown>>;
+  rows_affected: number;
+  columns: string[];
+  execution_time_ms: number;
+}
+
+export interface Schema {
+  name: string;
+  description: string;
+  tables: Array<{
+    name: string;
+    columns: Array<{
+      name: string;
+      type: string;
+    }>;
+  }>;
+}
+
+export interface SampleQuery {
+  title: string;
+  query: string;
+  description: string;
+  category: string;
+}
+
 // Demo API endpoints using relative paths
 export const demoApi = {
-  generateSQL: async (query: string, schemaContext?: string) => {
-    return post<{ sql: string; explanation: string }>('/v1/demo/sql-generate', {
+  generateSQL: async (query: string, schemaContext?: string): Promise<SQLGenerationResult> => {
+    return post<SQLGenerationResult>('/v1/demo/sql-generate', {
       query,
       schema_context: schemaContext,
     }, withAuth());
@@ -44,15 +90,15 @@ export const demoApi = {
     return get('/v1/demo/metrics', withAuth());
   },
 
-  executeSandbox: async (sql: string) => {
-    return post('/v1/demo/execute-sandbox', { sql }, withAuth());
+  executeSandbox: async (sql: string): Promise<SandboxExecuteResult> => {
+    return post<SandboxExecuteResult>('/v1/demo/execute-sandbox', { sql }, withAuth());
   },
 
-  getSchemaTemplates: async () => {
-    return get('/v1/demo/schema-templates', withAuth());
+  getSchemaTemplates: async (): Promise<Schema[]> => {
+    return get<Schema[]>('/v1/demo/schema-templates', withAuth());
   },
 
-  getSampleQueries: async () => {
-    return get('/v1/demo/sample-queries', withAuth());
+  getSampleQueries: async (): Promise<SampleQuery[]> => {
+    return get<SampleQuery[]>('/v1/demo/sample-queries', withAuth());
   },
 };
