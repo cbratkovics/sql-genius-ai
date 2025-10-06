@@ -70,9 +70,6 @@ export default function Home() {
               <Link href="/demo" className="text-white hover:text-blue-400 transition">
                 Demo
               </Link>
-              <Link href="/metrics" className="text-white hover:text-blue-400 transition">
-                Metrics
-              </Link>
               <Link href="https://sql-genius-api.onrender.com/docs" target="_blank" rel="noopener noreferrer" className="text-white hover:text-blue-400 transition">
                 API Docs
               </Link>
@@ -116,17 +113,10 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/demo"
-              className="group px-10 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-lg rounded-xl hover:shadow-2xl hover:shadow-blue-500/50 transform hover:scale-105 transition-all duration-200 flex items-center justify-center space-x-2 min-h-[60px]"
+              className="group px-16 py-7 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-2xl rounded-xl hover:shadow-2xl hover:shadow-blue-500/50 transform hover:scale-105 transition-all duration-200 flex items-center justify-center space-x-3 min-h-[80px]"
             >
               <span>Try Live Demo</span>
-              <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link
-              href="/metrics"
-              className="group px-10 py-5 bg-white/10 backdrop-blur-lg text-white font-bold text-lg rounded-xl hover:bg-white/20 hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2 min-h-[60px] border border-white/20"
-            >
-              <BarChart3 className="w-6 h-6 group-hover:scale-110 transition-transform" />
-              <span>View Metrics</span>
+              <ArrowRight className="w-8 h-8 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         </motion.div>
@@ -300,9 +290,6 @@ export default function Home() {
             <div className="flex items-center space-x-6">
               <Link href="/demo" className="text-gray-400 hover:text-white transition">
                 Demo
-              </Link>
-              <Link href="/metrics" className="text-gray-400 hover:text-white transition">
-                Metrics
               </Link>
               <Link href="https://sql-genius-api.onrender.com/docs" className="text-gray-400 hover:text-white transition">
                 API Docs
