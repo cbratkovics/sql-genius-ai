@@ -12,10 +12,9 @@ export function useDatabase() {
   const [currentSchema, setCurrentSchema] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const db = getDatabase();
-
   // Initialize database on mount
   useEffect(() => {
+    const db = getDatabase();
     const init = async () => {
       try {
         setIsLoading(true);
@@ -36,6 +35,7 @@ export function useDatabase() {
 
   const loadSchema = useCallback(
     async (schema: SchemaTemplate) => {
+      const db = getDatabase();
       try {
         setIsLoading(true);
         setError(null);
@@ -50,11 +50,12 @@ export function useDatabase() {
         setIsLoading(false);
       }
     },
-    [db]
+    []
   );
 
   const executeQuery = useCallback(
     async (sql: string) => {
+      const db = getDatabase();
       try {
         return await db.executeQuery(sql);
       } catch (err) {
@@ -62,11 +63,12 @@ export function useDatabase() {
         throw new Error(message);
       }
     },
-    [db]
+    []
   );
 
   const executeQueryAsObjects = useCallback(
     async (sql: string) => {
+      const db = getDatabase();
       try {
         return await db.executeQueryAsObjects(sql);
       } catch (err) {
@@ -74,9 +76,10 @@ export function useDatabase() {
         throw new Error(message);
       }
     },
-    [db]
+    []
   );
 
+  const db = getDatabase();
   return {
     isInitialized,
     isLoading,
@@ -104,10 +107,9 @@ export function useSQLQuery() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const db = getDatabase();
-
   const execute = useCallback(
     async (sql: string) => {
+      const db = getDatabase();
       try {
         setIsExecuting(true);
         setError(null);
@@ -124,7 +126,7 @@ export function useSQLQuery() {
         setIsExecuting(false);
       }
     },
-    [db]
+    []
   );
 
   const reset = useCallback(() => {

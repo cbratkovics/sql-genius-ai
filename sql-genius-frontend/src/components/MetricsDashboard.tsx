@@ -3,10 +3,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -14,25 +10,21 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   Area,
   AreaChart,
 } from 'recharts';
-import { 
-  Activity, 
-  TrendingUp, 
-  Users, 
+import {
+  Activity,
+  TrendingUp,
+  Users,
   Zap,
   Clock,
   CheckCircle,
-  AlertCircle,
   Database,
   Info
 } from 'lucide-react';
 import { useMetrics } from '@/hooks/useDemo';
-
-const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
 
 export default function MetricsDashboard() {
   const { data: metrics, isLoading } = useMetrics();
@@ -50,11 +42,6 @@ export default function MetricsDashboard() {
     hour: `${hour}:00`,
     queries: count,
   })) || [];
-
-  const performanceData = [
-    { name: 'Avg Response', value: metrics?.avg_response_time_ms || 0, color: '#3B82F6' },
-    { name: 'Success Rate', value: (metrics?.success_rate || 0) * 100, color: '#10B981' },
-  ];
 
   const queryDistribution = [
     { name: 'Simple', value: 40, color: '#10B981' },

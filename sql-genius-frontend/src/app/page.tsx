@@ -2,21 +2,17 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { 
-  Sparkles, 
-  Database, 
-  Zap, 
-  Shield, 
-  Globe, 
+import {
+  Sparkles,
+  Database,
+  Zap,
+  Shield,
+  Globe,
   BarChart3,
   ArrowRight,
-  CheckCircle,
   Code,
-  Users,
   Gauge,
-  Lock,
-  AlertCircle,
-  Info
+  AlertCircle
 } from 'lucide-react';
 
 export default function Home() {
