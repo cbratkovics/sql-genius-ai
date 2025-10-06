@@ -27,7 +27,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Database
+  Database,
+  Info
 } from 'lucide-react';
 import { useMetrics } from '@/hooks/useDemo';
 
@@ -73,6 +74,22 @@ export default function MetricsDashboard() {
           <h1 className="text-4xl font-bold text-white mb-2">Real-Time Metrics Dashboard</h1>
           <p className="text-gray-300">Monitor SQL Genius AI performance and usage</p>
         </motion.div>
+
+        {/* Demo Notice */}
+        <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-400 mt-0.5" />
+            <div>
+              <h3 className="text-lg font-semibold text-blue-300 mb-1">
+                Demo Metrics
+              </h3>
+              <p className="text-gray-300 text-sm">
+                These metrics are simulated to demonstrate dashboard UX patterns. 
+                In production, this would display real-time data from Prometheus/Grafana.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

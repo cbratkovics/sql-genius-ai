@@ -12,7 +12,8 @@ import {
   Code,
   FileText,
   Zap,
-  Shield
+  Shield,
+  CheckCircle
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { useGenerateSQL, useExecuteSandbox, useSchemaTemplates, useSampleQueries } from '@/hooks/useDemo';
@@ -115,6 +116,16 @@ export default function SQLPlayground() {
 
               {/* Playground Tab */}
               <Tabs.Content value="playground" className="space-y-6">
+                {/* Real AI Notice */}
+                <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                    <span className="text-sm text-green-300">
+                      Real AI: This uses actual Claude 3.5 Sonnet API for SQL generation
+                    </span>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Natural Language Input */}
                   <div className="space-y-4">
@@ -201,6 +212,13 @@ export default function SQLPlayground() {
                           scrollBeyondLastLine: false,
                         }}
                       />
+                    </div>
+                    
+                    {/* Execution Notice */}
+                    <div className="mt-2 p-2 bg-yellow-500/10 border-l-2 border-yellow-500 rounded">
+                      <span className="text-xs text-yellow-300">
+                        Note: "Execute" returns mock data for safety. Production implementation would use sandboxed database.
+                      </span>
                     </div>
                   </div>
                 </div>

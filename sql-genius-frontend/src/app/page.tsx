@@ -14,48 +14,50 @@ import {
   Code,
   Users,
   Gauge,
-  Lock
+  Lock,
+  AlertCircle,
+  Info
 } from 'lucide-react';
 
 export default function Home() {
   const features = [
     {
-      icon: <Zap className="w-6 h-6" />,
-      title: "Lightning Fast",
-      description: "Sub-300ms SQL generation with AI optimization"
+      icon: <Sparkles className="w-6 h-6" />,
+      title: "LLM Integration",
+      description: "Real Claude AI API integration with prompt engineering"
     },
     {
       icon: <Shield className="w-6 h-6" />,
-      title: "Enterprise Security",
-      description: "SQL injection protection and sandboxed execution"
+      title: "Input Validation",
+      description: "Pydantic models with SQL injection prevention patterns"
     },
     {
       icon: <Database className="w-6 h-6" />,
-      title: "Multi-Database",
-      description: "Support for PostgreSQL, MySQL, SQL Server, and more"
+      title: "Schema Context",
+      description: "RAG-style schema injection for better SQL generation"
+    },
+    {
+      icon: <Code className="w-6 h-6" />,
+      title: "Type-Safe APIs",
+      description: "End-to-end TypeScript with FastAPI + Pydantic"
+    },
+    {
+      icon: <Zap className="w-6 h-6" />,
+      title: "Async Architecture",
+      description: "Non-blocking I/O with async/await throughout"
     },
     {
       icon: <Globe className="w-6 h-6" />,
-      title: "Multi-Tenant",
-      description: "Isolated environments for each organization"
-    },
-    {
-      icon: <BarChart3 className="w-6 h-6" />,
-      title: "Real-Time Analytics",
-      description: "Monitor performance and usage metrics"
-    },
-    {
-      icon: <Lock className="w-6 h-6" />,
-      title: "JWT Authentication",
-      description: "Secure API access with token-based auth"
+      title: "Modern Deployment",
+      description: "Vercel + Render with proxy configuration"
     }
   ];
 
   const stats = [
-    { value: "< 300ms", label: "Response Time" },
-    { value: "99.9%", label: "Uptime SLA" },
-    { value: "10M+", label: "Queries Processed" },
-    { value: "24/7", label: "Support" }
+    { value: "Claude 3.5", label: "AI Model" },
+    { value: "FastAPI", label: "Backend Framework" },
+    { value: "Next.js 15", label: "Frontend" },
+    { value: "TypeScript", label: "Type Safety" }
   ];
 
   return (
@@ -97,9 +99,9 @@ export default function Home() {
           transition={{ duration: 0.5 }}
           className="text-center max-w-4xl mx-auto"
         >
-          <div className="inline-flex items-center space-x-2 bg-blue-600/20 px-4 py-2 rounded-full mb-6">
+          <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-500/20 border border-blue-500/30 rounded-full">
             <Sparkles className="w-4 h-4 text-blue-400" />
-            <span className="text-blue-400 text-sm font-semibold">Powered by Claude AI</span>
+            <span className="text-sm text-blue-300">Portfolio Demo Project</span>
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
@@ -109,9 +111,9 @@ export default function Home() {
             </span>
           </h1>
           
-          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Enterprise-grade AI platform that converts plain English to optimized SQL queries. 
-            Built for developers, analysts, and businesses.
+          <p className="text-gray-300 text-lg max-w-2xl mx-auto mb-8">
+            Portfolio demo showcasing AI-powered SQL generation using Claude AI. 
+            Features real LLM integration, type-safe architecture, and production-ready patterns.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -159,9 +161,11 @@ export default function Home() {
           transition={{ delay: 0.3 }}
           className="text-center mb-12"
         >
-          <h2 className="text-4xl font-bold text-white mb-4">Enterprise Features</h2>
-          <p className="text-gray-300 max-w-2xl mx-auto">
-            Built with scalability, security, and performance in mind
+          <h2 className="text-3xl font-bold text-white mb-4">
+            AI Engineering Skills Demonstrated
+          </h2>
+          <p className="text-gray-300 mb-12 max-w-2xl mx-auto">
+            This portfolio project demonstrates production-ready AI engineering patterns
           </p>
         </motion.div>
         
@@ -259,6 +263,30 @@ export default function Home() {
             </Link>
           </div>
         </motion.div>
+      </section>
+
+      {/* Transparency Notice */}
+      <section className="container mx-auto px-4 pb-12">
+        <div className="mt-16 p-6 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+          <h3 className="text-lg font-semibold text-yellow-300 mb-2 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5" />
+            Portfolio Demo Notice
+          </h3>
+          <p className="text-gray-300 text-sm">
+            This is a demonstration project showcasing AI engineering capabilities. 
+            The SQL generation uses real Claude AI integration, but metrics are simulated 
+            and SQL execution is sandboxed for demo purposes. View the full implementation 
+            at{' '}
+            <a 
+              href="https://github.com/cbratkovics/sql-genius-ai" 
+              className="text-blue-400 hover:underline"
+              target="_blank" 
+              rel="noopener noreferrer"
+            >
+              github.com/cbratkovics/sql-genius-ai
+            </a>
+          </p>
+        </div>
       </section>
 
       {/* Footer */}
