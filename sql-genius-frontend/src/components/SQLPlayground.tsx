@@ -217,7 +217,7 @@ export default function SQLPlayground() {
                     {/* Execution Notice */}
                     <div className="mt-2 p-2 bg-yellow-500/10 border-l-2 border-yellow-500 rounded">
                       <span className="text-xs text-yellow-300">
-                        Note: 'Execute' returns mock data for safety. Production implementation would use sandboxed database.
+                        Note: &apos;Execute&apos; returns mock data for safety. Production implementation would use sandboxed database.
                       </span>
                     </div>
                   </div>
