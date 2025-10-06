@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { demoApi } from '@/lib/api';
+import { demoApi, type DemoMetrics } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 
 export interface SQLGenerationResult {
@@ -42,7 +42,7 @@ export const useGenerateSQL = () => {
 };
 
 export const useMetrics = () => {
-  return useQuery({
+  return useQuery<DemoMetrics>({
     queryKey: ['metrics'],
     queryFn: demoApi.getMetrics,
     refetchInterval: 5000, // Refresh every 5 seconds

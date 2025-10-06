@@ -77,6 +77,15 @@ export interface SampleQuery {
   category: string;
 }
 
+export interface DemoMetrics {
+  total_queries_today: number;
+  avg_response_time_ms: number;
+  success_rate: number;
+  active_users: number;
+  queries_last_hour: number[];  // Array of 24 hourly query counts
+  popular_queries: string[];
+}
+
 // Demo API endpoints using relative paths
 export const demoApi = {
   generateSQL: async (query: string, schemaContext?: string): Promise<SQLGenerationResult> => {
@@ -86,8 +95,8 @@ export const demoApi = {
     }, withAuth());
   },
 
-  getMetrics: async () => {
-    return get('/v1/demo/metrics', withAuth());
+  getMetrics: async (): Promise<DemoMetrics> => {
+    return get<DemoMetrics>('/v1/demo/metrics', withAuth());
   },
 
   executeSandbox: async (sql: string): Promise<SandboxExecuteResult> => {
