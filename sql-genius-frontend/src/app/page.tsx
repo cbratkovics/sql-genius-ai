@@ -77,14 +77,15 @@ export default function Home() {
               <Link href="/metrics" className="text-white hover:text-blue-400 transition">
                 Metrics
               </Link>
-              <Link href="/docs" className="text-white hover:text-blue-400 transition">
+              <Link href="https://sql-genius-api.onrender.com/docs" target="_blank" rel="noopener noreferrer" className="text-white hover:text-blue-400 transition">
                 API Docs
               </Link>
-              <Link 
+              <Link
                 href="/demo"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                className="group px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transform hover:scale-105 transition-all duration-200 flex items-center space-x-1"
               >
-                Try It Free
+                <span>Try Demo</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
           </div>
@@ -119,16 +120,16 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/demo"
-              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-xl transform hover:scale-105 transition flex items-center justify-center space-x-2"
+              className="group px-10 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-lg rounded-xl hover:shadow-2xl hover:shadow-blue-500/50 transform hover:scale-105 transition-all duration-200 flex items-center justify-center space-x-2 min-h-[60px]"
             >
               <span>Try Live Demo</span>
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               href="/metrics"
-              className="px-8 py-4 bg-white/10 backdrop-blur-lg text-white font-semibold rounded-lg hover:bg-white/20 transition flex items-center justify-center space-x-2"
+              className="group px-10 py-5 bg-white/10 backdrop-blur-lg text-white font-bold text-lg rounded-xl hover:bg-white/20 hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2 min-h-[60px] border border-white/20"
             >
-              <BarChart3 className="w-5 h-5" />
+              <BarChart3 className="w-6 h-6 group-hover:scale-110 transition-transform" />
               <span>View Metrics</span>
             </Link>
           </div>
@@ -250,16 +251,19 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/demo"
-              className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg hover:shadow-xl transform hover:scale-105 transition"
+              className="group px-10 py-5 bg-white text-blue-600 font-bold text-lg rounded-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center space-x-2 min-h-[60px]"
             >
-              Start Free Trial
+              <span>Try Live Demo</span>
+              <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               href="https://github.com/cbratkovics/sql-genius-ai"
               target="_blank"
-              className="px-8 py-4 bg-black/20 text-white font-semibold rounded-lg hover:bg-black/30 transition"
+              rel="noopener noreferrer"
+              className="group px-10 py-5 bg-black/30 backdrop-blur-sm text-white font-bold text-lg rounded-lg hover:bg-black/40 transition-all duration-200 flex items-center justify-center space-x-2 min-h-[60px] border border-white/20"
             >
-              View on GitHub
+              <Code className="w-6 h-6" />
+              <span>View on GitHub</span>
             </Link>
           </div>
         </motion.div>
