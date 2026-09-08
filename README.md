@@ -399,37 +399,26 @@ sequenceDiagram
 
 ---
 
-## Performance Benchmarks
+## Performance and Scaling
 
-### **API Performance**
+No benchmark results are published for this project. It is a portfolio application, not a deployed
+service with production traffic, so there are no measured latency, throughput, or cache figures to
+report.
+
+The design targets below describe what the architecture is built toward, not what has been
+measured:
+
 ```yaml
-Response Times:
-  - SQL Generation: <500ms (p95)
-  - Query Execution: <2s (p95)
-  - Authentication: <100ms (p95)
-  - Dashboard Load: <1s (p95)
-
-Throughput:
-  - Concurrent Users: 10,000+
-  - Requests/Second: 5,000+
-  - SQL Queries/Hour: 1,000,000+
-  - Cache Hit Rate: >90%
+Design Targets:
+  - SQL generation and query execution handled asynchronously via Celery
+  - Redis caching for repeated schema lookups and query results
+  - Connection pooling against PostgreSQL
+  - Horizontal scaling of API workers behind a load balancer
 ```
 
-### **Scalability**
-```yaml
-Horizontal Scaling:
-  - API Services: Auto-scaling 2-50 instances
-  - Database: Read replicas + sharding
-  - Cache: Redis cluster (6 nodes)
-  - Queue: Celery workers (10-100 instances)
+To measure real numbers, deploy an instance and load-test it against your own schema and query mix.
 
-Resource Efficiency:
-  - CPU Usage: <70% average
-  - Memory Usage: <80% average
-  - Storage Growth: <10GB/month/tenant
-  - Network I/O: <1Gbps sustained
-```
+
 
 ---
 
