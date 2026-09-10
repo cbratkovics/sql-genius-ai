@@ -2,6 +2,8 @@
 
 The repository contains Render, Docker, and Vercel-oriented configuration. These files are maintained templates, not evidence that a service is currently deployed or that candidate URLs are owned, current, or healthy.
 
+Pull-request CI builds the checked-in `Dockerfile.backend` without logging in or pushing an image. Registry credentials and image publication are reserved for non-PR workflow runs.
+
 The lowest-dependency experience is the Next.js sample playground. Its build prepares `public/sql-wasm.wasm` from the locked `sql.js` dependency, and curated queries need no provider key. Optional live generation needs the FastAPI service and server-only `ANTHROPIC_API_KEY`; configure `ANTHROPIC_MODEL` when intentionally changing models. Do not expose this key through `NEXT_PUBLIC_*` variables.
 
 Before rollout:

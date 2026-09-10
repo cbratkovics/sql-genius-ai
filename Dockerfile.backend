@@ -1,8 +1,8 @@
-# Multi-stage build for production-ready backend
-FROM python:3.11-slim as builder
+# Multi-stage backend build
+FROM python:3.11-slim AS builder
 
 LABEL maintainer="Christopher Bratkovics <cbratkovics@example.com>"
-LABEL description="SQL Genius AI - Enterprise SaaS Backend"
+LABEL description="SQL Genius AI optional API backend"
 LABEL version="1.0.0"
 
 WORKDIR /app
@@ -35,8 +35,8 @@ RUN apt-get update && apt-get install -y \
 # Copy Python packages from builder
 COPY --from=builder /root/.local /home/appuser/.local
 
-# Copy application code
-COPY backend/ .
+# Preserve the package layout used by imports such as `backend.core.config`.
+COPY backend/ ./backend/
 COPY scripts/ ./scripts/
 
 # Create required directories
@@ -60,4 +60,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Default command
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
