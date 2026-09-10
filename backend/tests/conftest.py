@@ -1,16 +1,16 @@
-import pytest
 import asyncio
+import uuid
+
+import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from backend.main import app
+
 from backend.core.database import get_db
+from backend.core.security import create_access_token, get_password_hash
+from backend.main import app
 from backend.models.base import Base
 from backend.models.tenant import Tenant, TenantPlan
 from backend.models.user import User, UserRole
-from backend.core.security import get_password_hash, create_access_token
-import uuid
-
 
 # Test database URL (SQLite in memory)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -21,13 +21,6 @@ test_engine = create_async_engine(
     echo=False,
     pool_pre_ping=True
 )
-
-TestSessionLocal = sessionmaker(
-    test_engine,
-    class_=AsyncSession,
-    expire_on_commit=False
-)
-
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -49,9 +42,16 @@ async def setup_database():
 
 @pytest.fixture
 async def db_session(setup_database):
-    """Create a test database session"""
-    async with TestSessionLocal() as session:
-        yield session
+    """Create an isolated session even when application code commits."""
+    async with test_engine.connect() as connection:
+        transaction = await connection.begin()
+        async with AsyncSession(
+            bind=connection,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        ) as session:
+            yield session
+        await transaction.rollback()
 
 
 @pytest.fixture

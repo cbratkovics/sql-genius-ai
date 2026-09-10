@@ -1,524 +1,84 @@
-# SQL Genius AI - Enterprise SaaS Platform
+# SQL Genius AI
 
-**Production-Ready Multi-Tenant SaaS for Intelligent Data Analysis**
+**Natural-Language SQL and Analytics Playground**
 
-<div align="center">
+SQL Genius AI demonstrates an inspectable analytics workflow: select and inspect a deterministic sample schema, express a question or choose a curated example, review/edit SQL, explicitly run an accepted read-only query in browser SQLite, and inspect/export the preview. An optional FastAPI integration can request schema-aware SQLite SQL from Anthropic; it never executes provider output automatically.
 
-[![Deploy on Render](https://img.shields.io/badge/Deploy%20on-Render-46E3B7?style=for-the-badge)](https://sql-genius-api.onrender.com)
-[![Frontend on Vercel](https://img.shields.io/badge/Frontend-Vercel-000000?style=for-the-badge)](https://sql-genius.vercel.app)
-[![API Docs](https://img.shields.io/badge/API-Docs-2196F3?style=for-the-badge)](https://sql-genius-api.onrender.com/docs)
-[![Live Demo](https://img.shields.io/badge/Live-Demo-FF6B6B?style=for-the-badge)](https://sql-genius.vercel.app/demo)
+## Capability and evidence
 
-[![Enterprise Ready](https://img.shields.io/badge/Enterprise-Ready-success?style=for-the-badge&logo=shield)](https://github.com/cbratkovics/sql-genius-ai)
-[![Multi-Tenant](https://img.shields.io/badge/Multi--Tenant-SaaS-blue?style=for-the-badge&logo=building)](https://github.com/cbratkovics/sql-genius-ai)
-[![Security First](https://img.shields.io/badge/Security-First-red?style=for-the-badge&logo=lock)](https://github.com/cbratkovics/sql-genius-ai)
-[![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-Automated-green?style=for-the-badge&logo=github-actions)](https://github.com/cbratkovics/sql-genius-ai)
+| Capability | Status | Evidence path |
+|---|---|---|
+| Deterministic sample schemas and curated SQL | Implemented; exercised by local browser build | `sql-genius-frontend/src/data/` |
+| Browser SQLite execution | Implemented with statement policy, engine preparation, and preview bounds | `src/lib/sql/database.ts`, `src/lib/sql/policy.ts` |
+| Schema-aware generation request | Implemented; stubbed contract tests authored (not run here) | `backend/api/demo.py`, `backend/test_demo_contract.py` |
+| Live Anthropic generation | Optional; requires server-only credentials; not called in repository checks | `backend/services/anthropic_service.py` |
+| Account, cache, task, billing, and operations modules | Reference/optional code; not required by the public playground and not deployment evidence | `backend/services/`, `backend/tasks/` |
+| Hosted deployments | Unverified in this cleanup | `DEPLOYMENT.md` |
 
-</div>
+## Flow and provenance
 
----
+1. The selected fixture defines the exact tables, columns, types, and relationships.
+2. Choosing a **Curated example** loads reviewed fixture SQL. Choosing **Generate** sends the schema structure, schema ID, dialect (`sqlite`), and question to `/api/v1/demo/sql-generate`.
+3. Provider responses must be structured JSON with non-empty SQL, an explanation, and assumptions. Missing configuration and upstream/malformed responses are errors; there is no silent mock fallback.
+4. Generation and Run are separate. At Run, the browser policy accepts one `SELECT` or read-only CTE and rejects mutation/schema/policy commands before SQLite preparation.
+5. SQLite executes against synthetic fixture rows. Results are a preview capped at 500 rows and 1 MB. The UI attaches the source, dataset, execution state, and truncation state to the displayed SQL.
 
-> **Enterprise-grade SaaS platform** that transforms natural language into intelligent SQL queries with advanced security, monitoring, and multi-tenant architecture.
+Passing the policy is not a correctness evaluation or a general security sandbox. sql.js runs client-side on the main thread; this cleanup does not claim hard CPU cancellation. Only bundled synthetic databases should be used. Uploaded/private database execution is not supported.
 
----
+## No-key quick start
 
-## Enterprise Architecture
+Requirements: Node.js 18+ and npm.
 
-### Core Platform
-- **Multi-tenant SaaS** with database-per-tenant isolation
-- **FastAPI backend** with async PostgreSQL and Redis
-- **JWT authentication** with RSA key rotation and service mesh
-- **Role-based access control** (RBAC) with fine-grained permissions
-- **Multi-factor authentication** (TOTP, SMS, email, backup codes)
-
-### Security & Compliance
-- **Zero-trust architecture** with service mesh authentication
-- **Client-side encryption** with column-level access control
-- **Data masking** and automated compliance reporting
-- **Security scanning** integrated in CI/CD pipeline
-- **Vulnerability management** with automated patching
-
-### Observability & Monitoring
-- **Prometheus metrics** with custom business KPIs
-- **Grafana dashboards** for system and application monitoring
-- **ELK stack** for centralized logging and analysis
-- **Jaeger tracing** for distributed request tracking
-- **SLI/SLO monitoring** with automated alerting
-
-### FinOps & Cost Management
-- **AI API cost tracking** with per-token pricing models
-- **Infrastructure cost monitoring** via AWS Cost Explorer
-- **Cost anomaly detection** with statistical analysis
-- **Budget management** with configurable alerts
-- **Automated optimization** recommendations
-
-### Disaster Recovery
-- **Automated backups** (full, incremental, transaction log)
-- **Cross-region replication** with S3 storage
-- **Point-in-time recovery** with RTO/RPO targets
-- **Backup scheduling** and retention policies
-- **Recovery plan generation** and execution
-
----
-
-## Technology Stack
-
-### **Backend Services**
-```yaml
-API Framework: FastAPI with async/await
-Database: PostgreSQL 15 with SQLAlchemy ORM
-Cache: Redis 7 with async support
-Task Queue: Celery with Redis broker
-Authentication: JWT with RSA256 signing
-```
-
-### **Infrastructure**
-```yaml
-Containerization: Docker with multi-stage builds
-Orchestration: Kubernetes with Helm charts
-Monitoring: Prometheus + Grafana + ELK
-Service Mesh: Istio with mTLS
-Storage: AWS S3 with encryption
-```
-
-### **AI & Intelligence**
-```yaml
-SQL Generation: Claude 3.5 Sonnet
-Query Optimization: Custom SQL parser
-Semantic Caching: Vector similarity matching
-Business Intelligence: Automated insights
-Anomaly Detection: Statistical analysis
-```
-
-### **DevOps & Security**
-```yaml
-CI/CD: GitHub Actions with security scanning
-Security: TruffleHog, Snyk, Bandit, Semgrep
-Container Security: Trivy, Dockle
-Performance: Load testing with Locust
-License Compliance: Automated validation
-```
-
----
-
-## Live Deployment
-
-### **Production URLs**
-- **Live Demo**: [https://sql-genius.vercel.app](https://sql-genius.vercel.app)
-- **Metrics Dashboard**: [https://sql-genius.vercel.app/metrics](https://sql-genius.vercel.app/metrics)
-- **API Backend**: [https://sql-genius-api.onrender.com](https://sql-genius-api.onrender.com)
-- **API Documentation**: [https://sql-genius-api.onrender.com/docs](https://sql-genius-api.onrender.com/docs)
-
-### **Quick Deploy**
-
-#### Deploy Backend to Render
-1. Fork this repository
-2. Connect to [Render](https://render.com)
-3. Create new Blueprint from `render.yaml`
-4. Set environment variables:
-   - `ANTHROPIC_API_KEY`: Your Claude API key
-   - `JWT_SECRET_KEY`: Auto-generated
-   - `DATABASE_URL`: Auto-configured
-
-#### Deploy Frontend to Vercel
 ```bash
 cd sql-genius-frontend
-npx vercel --prod
+npm ci
+npm run dev
 ```
 
-### **Demo Features**
-- **SQL Generation**: Natural language to SQL with AI
-- **Live Playground**: Interactive query builder
-- **Real-time Metrics**: Performance monitoring dashboard
-- **Schema Templates**: E-commerce, SaaS, Healthcare, Financial
-- **Sandboxed Execution**: Safe query testing environment
+Open `http://localhost:3000/demo`, choose **Sample Queries**, load a curated query, inspect it, then click **Execute**. Before development and production builds, a preparation script copies the matching WASM file from the locked `sql.js` package into the ignored `public/sql-wasm.wasm` runtime path. No binary is committed, and no CDN or API key is required for this path.
 
-### **Verify Deploy**
+## Optional generation backend
+
+Use Python 3.11 (the pinned backend dependencies predate newer Python releases):
+
 ```bash
-# Check API health
-curl -sSf https://sql-genius-api.onrender.com/health
-
-# View API documentation
-curl -sSf https://sql-genius-api.onrender.com/docs
+python3.11 -m venv .venv
+. .venv/bin/activate
+pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env  # review; do not commit it
+export ANTHROPIC_API_KEY=...
+uvicorn backend.main:app --reload
 ```
 
-For detailed deployment instructions, see the [render.yaml](render.yaml) Blueprint configuration.
+Set the frontend reverse proxy/environment according to its Next configuration. `ANTHROPIC_API_KEY` is server-only; never create a `NEXT_PUBLIC_` key. `ANTHROPIC_MODEL` is configurable and defaults to the model identifier retained for compatibility with the pinned SDK.
 
----
+Mounted public routes are `/`, `/health`, and routes under `/api/v1` from `auth`, `users`, and `demo`. The generation contract is:
 
-## Enterprise Features
+```json
+POST /api/v1/demo/sql-generate
+{"query":"List order identifiers","schema":{"id":"ecommerce","dialect":"sqlite","tables":[{"name":"orders","columns":[{"name":"order_id","type":"INTEGER"}]}],"relationships":[]}}
+```
 
-### Unified Authentication Service
-- **JWT with RSA rotation** - Automatic key rotation every 24 hours
-- **Multi-factor authentication** - TOTP, SMS, email, backup codes
-- **Single Sign-On (SSO)** - SAML 2.0 and OpenID Connect
-- **Service mesh auth** - mTLS between microservices
-- **Session management** - Redis-based with automatic cleanup
+A successful response identifies `source`, actual `provider`/`model`, schema and dialect, provider timing/usage when available, `policy_status: "not_checked"`, and `execution_status: "not_run"`. `/api/v1/demo/execute-sandbox` is deprecated and returns `not_run`; remote arbitrary SQL execution is intentionally disabled. `/api/v1/demo/metrics` returns 410 because its values were fabricated.
 
-### Advanced SQL Engine
-- **Multi-step reasoning** - Complex query decomposition
-- **Validation pipeline** - Syntax and semantic checking
-- **Security scanning** - SQL injection prevention
-- **Query sandboxing** - Isolated execution environment
-- **Performance optimization** - Automatic query tuning
+## Checks
 
-### Multi-Tenant Architecture
-- **Database isolation** - Database-per-tenant pattern
-- **Dynamic routing** - Tenant-aware request routing
-- **Resource quotas** - Per-tenant limits and throttling
-- **Usage metering** - Detailed consumption tracking
-- **Billing integration** - Stripe subscription management
-
-### Business Intelligence
-- **Automated insights** - AI-powered data analysis
-- **Anomaly detection** - Statistical outlier identification
-- **Natural language reporting** - Executive summaries
-- **Predictive analytics** - Trend forecasting
-- **Custom dashboards** - Real-time visualizations
-
-### Intelligent Caching
-- **Semantic similarity** - Vector-based query matching
-- **TTL optimization** - Dynamic cache expiration
-- **Distributed cache** - Redis cluster support
-- **Cache invalidation** - Smart dependency tracking
-- **Performance metrics** - Cache hit/miss analytics
-
----
-
-## Development Setup
-
-### **Prerequisites**
 ```bash
-- Python 3.11+
-- Docker & Docker Compose
-- PostgreSQL 15
-- Redis 7
-- Node.js 18+ (for frontend)
+pytest -q backend/test_demo_contract.py
+cd sql-genius-frontend && npm run lint && npm run build
 ```
 
-### **Quick Start**
-```bash
-# Clone repository
-git clone https://github.com/cbratkovics/sql-genius-ai.git
-cd sql-genius-ai
+These checks cover contracts and deterministic implementation behavior, not live-model text-to-SQL accuracy. See [`docs/PORTFOLIO_EVIDENCE.md`](docs/PORTFOLIO_EVIDENCE.md) for evidence categories, limitations, and external follow-up copy.
 
-# Start infrastructure services
-docker-compose -f infrastructure/docker/docker-compose.yml up -d
+## Repository map
 
-# Install Python dependencies
-cd backend
-pip install -r requirements.txt
+- `sql-genius-frontend/`: maintained Next.js playground and fixture data.
+- `backend/api/demo.py`: optional public generation contract and disabled compatibility endpoints.
+- `backend/services/anthropic_service.py`: optional provider adapter.
+- `backend/test_demo_contract.py`: backend contract tests (provider calls are stubbed).
+- `backend/services/`, `backend/tasks/`, `infrastructure/`: broader optional/reference modules; presence does not establish operation.
+- `DEPLOYMENT.md`: maintained templates and rollout checks, not proof of deployment.
 
-# Run database migrations
-alembic upgrade head
+## Important limitations
 
-# Start the API server
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# Start monitoring stack
-docker-compose -f infrastructure/monitoring/docker-compose.monitoring.yml up -d
-```
-
-### **Environment Configuration**
-```bash
-# .env file
-DATABASE_URL=postgresql://user:pass@localhost:5432/sqlgenius
-REDIS_URL=redis://localhost:6379
-CLAUDE_API_KEY=your_claude_api_key
-JWT_SECRET_KEY=your_jwt_secret
-STRIPE_SECRET_KEY=your_stripe_key
-AWS_ACCESS_KEY_ID=your_aws_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret
-```
-
----
-
-## CI/CD Pipeline
-
-### **Security Scanning**
-- **Secret detection** - TruffleHog for exposed secrets
-- **Dependency scanning** - Snyk for vulnerabilities
-- **SAST analysis** - Bandit and Semgrep
-- **Container security** - Trivy and Dockle
-- **License compliance** - Automated validation
-
-### **Quality Gates**
-- **Code coverage** - 90% minimum threshold
-- **Type checking** - MyPy static analysis
-- **Code formatting** - Black and isort
-- **Performance testing** - Regression detection
-- **Security benchmarks** - OWASP compliance
-
-### **Deployment Strategy**
-- **GitOps workflow** - ArgoCD for deployments
-- **Blue-green deployment** - Zero-downtime releases
-- **Automated rollback** - Health check failures
-- **Progressive delivery** - Feature flags and canary
-- **Post-deployment testing** - Smoke and integration tests
-
----
-
-## Monitoring & Observability
-
-### **Metrics & Dashboards**
-```yaml
-Application Metrics:
-  - Request latency and throughput
-  - Error rates and success rates
-  - SQL query performance
-  - Cache hit/miss ratios
-  - Business KPIs and conversion
-
-Infrastructure Metrics:
-  - CPU, memory, disk usage
-  - Database connection pools
-  - Queue depth and processing
-  - Network I/O and latency
-  - Container resource usage
-```
-
-### **Alerting Rules**
-```yaml
-Critical Alerts:
-  - API error rate > 1%
-  - Response time > 2s
-  - Database connections > 80%
-  - Disk usage > 85%
-  - Memory usage > 90%
-
-Warning Alerts:
-  - Cache hit rate < 80%
-  - Queue processing delay > 30s
-  - Cost anomaly detected
-  - Backup failure
-  - SSL certificate expiry < 30 days
-```
-
----
-
-## Cost Management
-
-### **FinOps Features**
-- **Real-time cost tracking** - Per-tenant consumption
-- **Budget alerts** - Configurable thresholds
-- **Cost allocation** - Department and project tags
-- **Optimization recommendations** - AI-powered suggestions
-- **Anomaly detection** - Statistical analysis of spending
-
-### **Cost Optimization**
-```yaml
-AI API Costs:
-  - Token usage optimization
-  - Model selection automation
-  - Batch processing
-  - Caching strategies
-  - Rate limiting
-
-Infrastructure Costs:
-  - Auto-scaling policies
-  - Reserved instance planning
-  - Storage lifecycle management
-  - Spot instance utilization
-  - Resource right-sizing
-```
-
----
-
-## API Documentation
-
-### **Authentication Endpoints**
-```python
-POST /auth/login          # User authentication
-POST /auth/register       # User registration
-POST /auth/mfa/setup      # MFA configuration
-POST /auth/refresh        # Token refresh
-DELETE /auth/logout       # Session termination
-```
-
-### **SQL Generation Endpoints**
-```python
-POST /sql/generate        # Generate SQL from natural language
-POST /sql/execute         # Execute SQL query
-GET /sql/history          # Query history
-POST /sql/validate        # Validate SQL syntax
-GET /sql/schema          # Database schema
-```
-
-### **Management Endpoints**
-```python
-GET /tenants              # Tenant management
-POST /tenants/{id}/backup # Create backup
-GET /metrics              # Prometheus metrics
-GET /health              # Health check
-GET /docs                # OpenAPI documentation
-```
-
----
-
-## Architecture Diagrams
-
-### **System Architecture**
-```mermaid
-graph TB
-    LB[Load Balancer] --> API[FastAPI Services]
-    API --> DB[(PostgreSQL)]
-    API --> CACHE[(Redis)]
-    API --> QUEUE[Celery Workers]
-    
-    API --> AUTH[Auth Service]
-    API --> SQL[SQL Engine]
-    API --> BI[BI Service]
-    
-    MONITOR[Prometheus] --> GRAFANA[Grafana]
-    LOGS[ELK Stack] --> KIBANA[Kibana]
-    
-    BACKUP[Backup Service] --> S3[(AWS S3)]
-    COST[Cost Service] --> AWS[AWS APIs]
-```
-
-### **Multi-Tenant Data Flow**
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant LB as Load Balancer
-    participant API as API Gateway
-    participant AUTH as Auth Service
-    participant SQL as SQL Engine
-    participant DB as Tenant DB
-    
-    C->>LB: Request with JWT
-    LB->>API: Route to service
-    API->>AUTH: Validate token
-    AUTH->>API: Tenant context
-    API->>SQL: Process query
-    SQL->>DB: Execute on tenant DB
-    DB->>SQL: Results
-    SQL->>API: Formatted response
-    API->>C: Business insights
-```
-
----
-
-## Performance and Scaling
-
-No benchmark results are published for this project. It is a portfolio application, not a deployed
-service with production traffic, so there are no measured latency, throughput, or cache figures to
-report.
-
-The design targets below describe what the architecture is built toward, not what has been
-measured:
-
-```yaml
-Design Targets:
-  - SQL generation and query execution handled asynchronously via Celery
-  - Redis caching for repeated schema lookups and query results
-  - Connection pooling against PostgreSQL
-  - Horizontal scaling of API workers behind a load balancer
-```
-
-To measure real numbers, deploy an instance and load-test it against your own schema and query mix.
-
-
-
----
-
-## Security & Compliance
-
-### **Security Controls**
-- **Authentication**: JWT with RSA256, MFA required
-- **Authorization**: Fine-grained RBAC permissions
-- **Encryption**: TLS 1.3 in transit, AES-256 at rest
-- **Network**: VPC isolation, security groups
-- **Monitoring**: Real-time threat detection
-
-### **Compliance Standards**
-- **SOC 2 Type II** - Security and availability
-- **GDPR** - Data privacy and protection
-- **HIPAA** - Healthcare data security
-- **PCI DSS** - Payment card industry
-- **ISO 27001** - Information security management
-
----
-
-## Deployment
-
-### **Production Deployment**
-```bash
-# Build and push images
-docker build -t sqlgenius/api:latest -f infrastructure/docker/Dockerfile.backend .
-docker push sqlgenius/api:latest
-
-# Deploy with Helm
-helm upgrade --install sqlgenius ./charts/sqlgenius \
-  --namespace production \
-  --values values.production.yaml
-
-# Verify deployment
-kubectl get pods -n production
-kubectl logs -f deployment/sqlgenius-api -n production
-```
-
-### **Infrastructure as Code**
-```yaml
-# Kubernetes manifests
-- Deployments and Services
-- ConfigMaps and Secrets
-- Ingress and NetworkPolicies
-- HorizontalPodAutoscaler
-- PersistentVolumeClaims
-
-# Helm Charts
-- Application deployment
-- Configuration management
-- Environment-specific values
-- Dependency management
-- Upgrade strategies
-```
-
----
-
-## Contributing
-
-### **Development Guidelines**
-- **Code Style**: Black formatting, PEP 8 compliance
-- **Testing**: 90%+ coverage, unit and integration tests
-- **Documentation**: Docstrings, API documentation
-- **Security**: Security review for all changes
-- **Performance**: Benchmark critical paths
-
-### **Contribution Process**
-1. Fork the repository
-2. Create feature branch
-3. Implement changes with tests
-4. Run security and quality checks
-5. Submit pull request
-6. Code review and approval
-7. Automated deployment
-
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## Enterprise Support
-
-<div align="center">
-
-### **Production-Ready SaaS Platform**
-
-[![PRODUCTION READY](https://img.shields.io/badge/PRODUCTION-READY-success?style=for-the-badge&logo=rocket)](https://github.com/cbratkovics/sql-genius-ai)
-
-[![ENTERPRISE GRADE](https://img.shields.io/badge/ENTERPRISE-GRADE-blue?style=for-the-badge&logo=building)](https://github.com/cbratkovics/sql-genius-ai)
-
-*Multi-tenant • Secure • Scalable • Observable • Cost-optimized*
-
----
-
-**Built by [Christopher Bratkovics](https://github.com/cbratkovics)**
-
-**Star this repo to support enterprise-grade open source!**
-
-</div>
+No production benchmark, model-accuracy measurement, compliance certification, uptime result, adoption metric, or deployment verification is asserted. Generated SQL can be wrong. Review it, confirm business definitions, and use only the synthetic playground data. The in-memory backend rate limiter is per process and uses the directly observed peer address; it is not distributed abuse protection.

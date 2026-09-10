@@ -1,98 +1,73 @@
-import os
-import json
+"""Small, explicit wrapper around the optional Anthropic integration."""
+
+from dataclasses import dataclass
+from typing import Optional
+
 from anthropic import AsyncAnthropic
+
 from backend.core.config import settings
 
+
+class ProviderNotConfiguredError(RuntimeError):
+    """Raised when live generation was requested without credentials."""
+
+
+class ProviderResponseError(RuntimeError):
+    """Raised when the provider response has no usable text."""
+
+
+@dataclass(frozen=True)
+class CompletionResult:
+    text: str
+    provider: str
+    model: str
+    input_tokens: Optional[int]
+    output_tokens: Optional[int]
+
+
 class AnthropicService:
-    """Service for interacting with Anthropic's Claude API"""
-    
-    def __init__(self):
-        self.api_key = settings.ANTHROPIC_API_KEY if hasattr(settings, 'ANTHROPIC_API_KEY') else os.getenv("ANTHROPIC_API_KEY")
-        self.client = AsyncAnthropic(api_key=self.api_key) if self.api_key else None
-        
+    """Interact with Anthropic without silently substituting fixture SQL."""
+
+    def __init__(self, client=None):
+        self.api_key = settings.ANTHROPIC_API_KEY
+        self.client = client or (
+            AsyncAnthropic(api_key=self.api_key, timeout=settings.ANTHROPIC_TIMEOUT_SECONDS)
+            if self.api_key
+            else None
+        )
+
     async def generate_completion(
         self,
         prompt: str,
         max_tokens: int = 500,
         temperature: float = 0.2,
-        model: str = "claude-3-haiku-20240307"
-    ) -> str:
-        """
-        Generate a completion using Claude API.
-        Falls back to mock response if API key not configured.
-        """
+        model: Optional[str] = None,
+    ) -> CompletionResult:
         if not self.client:
-            # Return mock response for demo when API key not configured
-            return self._get_mock_response(prompt)
-        
-        try:
-            response = await self.client.messages.create(
-                model=model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+            raise ProviderNotConfiguredError(
+                "Live generation is not configured. Set ANTHROPIC_API_KEY on the backend, "
+                "or choose a curated example in the playground."
             )
-            return response.content[0].text
-        except Exception as e:
-            print(f"Anthropic API error: {e}")
-            # Fallback to mock response
-            return self._get_mock_response(prompt)
-    
-    def _get_mock_response(self, prompt: str) -> str:
-        """
-        Generate a mock SQL response for demo purposes.
-        """
-        # Extract key information from prompt
-        prompt_lower = prompt.lower()
-        
-        if "sales" in prompt_lower and "month" in prompt_lower:
-            return json.dumps({
-                "sql": """SELECT 
-    DATE_TRUNC('month', order_date) as month,
-    SUM(total_amount) as total_sales,
-    COUNT(*) as order_count
-FROM orders
-GROUP BY DATE_TRUNC('month', order_date)
-ORDER BY month DESC""",
-                "explanation": "This query aggregates sales data by month, showing total sales amount and order count for each month.",
-                "assumptions": ["Assumes an 'orders' table with 'order_date' and 'total_amount' columns"]
-            })
-        elif "customer" in prompt_lower and ("top" in prompt_lower or "best" in prompt_lower):
-            return json.dumps({
-                "sql": """SELECT 
-    c.customer_id,
-    c.customer_name,
-    SUM(o.total_amount) as lifetime_value,
-    COUNT(o.order_id) as total_orders
-FROM customers c
-JOIN orders o ON c.customer_id = o.customer_id
-GROUP BY c.customer_id, c.customer_name
-ORDER BY lifetime_value DESC
-LIMIT 10""",
-                "explanation": "This query finds the top customers by lifetime value, joining customers and orders tables.",
-                "assumptions": ["Assumes 'customers' and 'orders' tables with appropriate foreign key relationships"]
-            })
-        elif "product" in prompt_lower:
-            return json.dumps({
-                "sql": """SELECT 
-    p.product_id,
-    p.product_name,
-    p.category,
-    SUM(oi.quantity) as units_sold,
-    SUM(oi.quantity * oi.unit_price) as revenue
-FROM products p
-JOIN order_items oi ON p.product_id = oi.product_id
-GROUP BY p.product_id, p.product_name, p.category
-ORDER BY revenue DESC""",
-                "explanation": "This query analyzes product performance by calculating units sold and revenue.",
-                "assumptions": ["Assumes 'products' and 'order_items' tables exist"]
-            })
-        else:
-            # Generic fallback
-            return json.dumps({
-                "sql": "SELECT * FROM table_name WHERE condition = 'value' LIMIT 10",
-                "explanation": "Generic query structure based on the natural language input.",
-                "assumptions": ["Table and column names need to be specified based on your schema"]
-            })
+
+        requested_model = model or settings.ANTHROPIC_MODEL
+        response = await self.client.messages.create(
+            model=requested_model,
+            max_tokens=min(max_tokens, settings.ANTHROPIC_MAX_OUTPUT_TOKENS),
+            temperature=temperature,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text_blocks = [
+            block.text for block in response.content
+            if getattr(block, "type", None) == "text" and getattr(block, "text", "").strip()
+        ]
+        if not text_blocks:
+            raise ProviderResponseError("The provider returned no usable text.")
+
+        usage = getattr(response, "usage", None)
+        return CompletionResult(
+            text="\n".join(text_blocks),
+            provider="anthropic",
+            model=getattr(response, "model", requested_model),
+            input_tokens=getattr(usage, "input_tokens", None),
+            output_tokens=getattr(usage, "output_tokens", None),
+        )
