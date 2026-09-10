@@ -1,0 +1,18 @@
+{
+  "source_commit": "24968c57b7e57febcb0c271212f6dde1a37607aa",
+  "source_dirty": true,
+  "fixture_hash_sha256": "249808cce109df57b3f76e830af9a8f76abbca8785b874fdd8d7acc417f902d7",
+  "schema_dialect": "bundled fixtures / SQLite",
+  "execution_environment": {"node": "v24.15.0", "platform": "Linux x86_64"},
+  "command": "cd sql-genius-frontend && npm test",
+  "provider_calls": "stubbed backend contract tests authored but not run; no live provider call",
+  "comparison_rules": "policy accept/reject booleans and exact CSV text",
+  "cases": [
+    {"id": "supported-select-cte-literals", "outcome": "pass"},
+    {"id": "multiple-and-side-effect-statements", "outcome": "pass"},
+    {"id": "csv-zero-null-escaping-formulas", "outcome": "pass"},
+    {"id": "backend-provider-contract", "outcome": "not_run", "reason": "pinned Python dependencies unavailable; network package install returned 403"}
+  ],
+  "summary": {"pass": 3, "fail": 0, "error": 0, "not_run": 1},
+  "limitations": "No live-model accuracy evaluation, browser CPU cancellation test, or deployment verification."
+}

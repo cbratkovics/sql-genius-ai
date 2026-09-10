@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Sparkles,
@@ -11,8 +11,6 @@ import {
   Loader2,
   Code,
   FileText,
-  Zap,
-  Shield,
   CheckCircle,
   Download,
   ChevronDown
@@ -27,6 +25,8 @@ import type { SampleQuery } from '@/data/queries/types';
 import * as Tabs from '@radix-ui/react-tabs';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { rowsToCsv } from '@/lib/csv';
+import type { SQLGenerationResult } from '@/lib/api';
 
 export default function SQLPlayground() {
   const [query, setQuery] = useState('');
@@ -34,6 +34,9 @@ export default function SQLPlayground() {
   const [selectedSchemaId, setSelectedSchemaId] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('playground');
+  const [generation, setGeneration] = useState<SQLGenerationResult | null>(null);
+  const [sqlSource, setSqlSource] = useState<'curated' | 'provider' | null>(null);
+  const requestSequence = useRef(0);
 
   const generateSQL = useGenerateSQL();
   const database = useDatabase();
@@ -48,10 +51,13 @@ export default function SQLPlayground() {
   }, [database.isInitialized]);
 
   const handleSchemaChange = async (schema: SchemaTemplate) => {
-    setSelectedSchemaId(schema.id);
-    await database.loadSchema(schema);
+    requestSequence.current += 1;
     setGeneratedSQL('');
+    setGeneration(null);
+    setSqlSource(null);
     sqlQuery.reset();
+    await database.loadSchema(schema);
+    setSelectedSchemaId(schema.id);
   };
 
   const handleGenerate = async () => {
@@ -67,13 +73,24 @@ export default function SQLPlayground() {
     }
 
     try {
+      const sequence = ++requestSequence.current;
       const result = await generateSQL.mutateAsync({
         query,
-        schemaContext: currentSchema.name,
+        schema: {
+          id: currentSchema.id, dialect: 'sqlite',
+          tables: currentSchema.tables.map((table) => ({ name: table.name, columns: table.columns.map(({ name, type }) => ({ name, type })) })),
+          relationships: currentSchema.relationships.map((relationship) => ({
+            source: `${relationship.from.table}.${relationship.from.column}`,
+            target: `${relationship.to.table}.${relationship.to.column}`,
+          })),
+        },
       });
 
-      if (result.success) {
+      if (result.success && sequence === requestSequence.current && result.metadata.schema_id === currentSchema.id) {
         setGeneratedSQL(result.sql);
+        setGeneration(result);
+        setSqlSource('provider');
+        sqlQuery.reset();
       }
     } catch (error) {
       console.error('SQL generation error:', error);
@@ -107,6 +124,9 @@ export default function SQLPlayground() {
   const loadSampleQuery = (sample: SampleQuery) => {
     setQuery(sample.naturalLanguage);
     setGeneratedSQL(sample.sql);
+    setGeneration(null);
+    setSqlSource('curated');
+    sqlQuery.reset();
     setActiveTab('playground');
   };
 
@@ -116,10 +136,7 @@ export default function SQLPlayground() {
   const exportResults = () => {
     if (!sqlQuery.results) return;
 
-    const csv = [
-      sqlQuery.results.columns.join(','),
-      ...sqlQuery.results.values.map(row => row.join(','))
-    ].join('\n');
+    const csv = rowsToCsv(sqlQuery.results.columns, sqlQuery.results.values);
 
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -171,16 +188,7 @@ export default function SQLPlayground() {
                   <p className="text-blue-100 text-sm mt-1">Interactive SQL environment with AI-powered generation</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2 bg-white/20 rounded-full px-4 py-2">
-                  <Shield className="w-4 h-4 text-green-300" />
-                  <span className="text-sm text-white">In-Browser SQL</span>
-                </div>
-                <div className="flex items-center space-x-2 bg-white/20 rounded-full px-4 py-2">
-                  <Zap className="w-4 h-4 text-yellow-300" />
-                  <span className="text-sm text-white">AI Powered</span>
-                </div>
-              </div>
+              <div className="text-sm text-white bg-white/20 rounded-full px-4 py-2">SQLite sample data</div>
             </div>
 
             {/* Schema Selector */}
@@ -246,7 +254,7 @@ export default function SQLPlayground() {
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-400" />
                     <span className="text-sm text-green-300">
-                      Real AI: Uses Claude 3.5 Sonnet API for SQL generation + In-browser SQLite execution
+                      Curated examples work without a key. Live generation requires the optional backend provider; generated SQL is never run automatically.
                     </span>
                   </div>
                 </div>
@@ -312,7 +320,7 @@ export default function SQLPlayground() {
                         height="160px"
                         defaultLanguage="sql"
                         value={generatedSQL}
-                        onChange={(value) => setGeneratedSQL(value || '')}
+                        onChange={(value) => { setGeneratedSQL(value || ''); setGeneration(null); sqlQuery.reset(); }}
                         theme="vs-dark"
                         options={{
                           minimap: { enabled: false },
@@ -329,44 +337,35 @@ export default function SQLPlayground() {
                     <div className="p-2 bg-blue-500/10 border-l-2 border-blue-500 rounded">
                       <span className="text-xs text-blue-300">
                         <Database className="w-3 h-3 inline mr-1" />
-                        Queries execute against in-browser SQLite database with sample data
+                        Sample dataset: {currentSchema?.name ?? 'not loaded'}. Accepted read-only SQL executes locally with SQLite after you click Run.
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Generation Results */}
-                {generateSQL.data && generateSQL.data.success && (
+                {generation && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-gray-800/50 rounded-lg p-6 space-y-4 border border-gray-700"
                   >
-                    <h3 className="text-white font-semibold text-lg">AI Analysis</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <h3 className="text-white font-semibold text-lg">Generation details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
-                        <div className="text-gray-400 text-sm mb-1">Confidence Score</div>
-                        <div className="text-2xl font-bold text-green-400">
-                          {(generateSQL.data.confidence_score * 100).toFixed(0)}%
-                        </div>
+                        <div className="text-gray-400 text-sm mb-1">Source</div>
+                        <div className="text-lg font-bold text-blue-300">{generation.metadata.provider} / {generation.metadata.model}</div>
                       </div>
                       <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
-                        <div className="text-gray-400 text-sm mb-1">Generation Time</div>
-                        <div className="text-2xl font-bold text-blue-400">
-                          {generateSQL.data.performance.generation_time_ms.toFixed(0)}ms
-                        </div>
-                      </div>
-                      <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
-                        <div className="text-gray-400 text-sm mb-1">Security Status</div>
-                        <div className="text-2xl font-bold text-green-400 flex items-center">
-                          <CheckCircle className="w-6 h-6 mr-2" />
-                          Validated
-                        </div>
+                        <div className="text-gray-400 text-sm mb-1">Provider round trip</div>
+                        <div className="text-lg font-bold text-blue-400">{generation.metadata.provider_round_trip_ms.toFixed(0)} ms</div>
                       </div>
                     </div>
                     <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
                       <div className="text-gray-400 text-sm mb-2">Explanation</div>
-                      <p className="text-white">{generateSQL.data.explanation}</p>
+                      <p className="text-white">{generation.explanation}</p>
+                      {generation.assumptions.length > 0 && <p className="text-sm text-amber-200 mt-2">Assumptions: {generation.assumptions.join('; ')}</p>}
+                      <p className="text-xs text-gray-400 mt-2">Response parsed; execution policy and correctness have not yet been evaluated.</p>
                     </div>
                   </motion.div>
                 )}
@@ -413,8 +412,8 @@ export default function SQLPlayground() {
                       </table>
                     </div>
                     <div className="mt-4 flex items-center justify-between text-sm text-gray-400">
-                      <span>{sqlQuery.results.rowCount} rows returned</span>
-                      <span className="text-green-400">✓ Executed successfully</span>
+                      <span>{sqlQuery.results.rowCount} preview rows{sqlQuery.results.truncated ? ' (truncated)' : ''}</span>
+                      <span className="text-green-400">Executed locally with SQLite · {sqlSource === 'curated' ? 'curated SQL' : 'edited/generated SQL'}</span>
                     </div>
                   </motion.div>
                 )}

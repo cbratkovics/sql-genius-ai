@@ -40,6 +40,9 @@ class Settings(BaseSettings):
 
     # AI APIs
     ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
+    ANTHROPIC_MODEL: str = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+    ANTHROPIC_TIMEOUT_SECONDS: float = 20.0
+    ANTHROPIC_MAX_OUTPUT_TOKENS: int = 700
     OPENAI_API_KEY: Optional[str] = None
 
     # Stripe (optional for demo)

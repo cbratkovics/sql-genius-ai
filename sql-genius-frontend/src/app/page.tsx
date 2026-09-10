@@ -8,7 +8,6 @@ import {
   Zap,
   Shield,
   Globe,
-  BarChart3,
   ArrowRight,
   Code,
   Gauge,
@@ -20,17 +19,17 @@ export default function Home() {
     {
       icon: <Sparkles className="w-6 h-6" />,
       title: "LLM Integration",
-      description: "Real Claude AI API integration with prompt engineering"
+      description: "Optional provider generation with explicit model and request provenance"
     },
     {
       icon: <Shield className="w-6 h-6" />,
       title: "Input Validation",
-      description: "Pydantic models with SQL injection prevention patterns"
+      description: "Typed requests plus a narrow, tested read-only SQLite policy"
     },
     {
       icon: <Database className="w-6 h-6" />,
       title: "Schema Context",
-      description: "RAG-style schema injection for better SQL generation"
+      description: "Selected tables, columns, types, and relationships are sent as bounded context"
     },
     {
       icon: <Code className="w-6 h-6" />,
@@ -40,17 +39,17 @@ export default function Home() {
     {
       icon: <Zap className="w-6 h-6" />,
       title: "Async Architecture",
-      description: "Non-blocking I/O with async/await throughout"
+      description: "Separate generation, review, and explicit local execution states"
     },
     {
       icon: <Globe className="w-6 h-6" />,
       title: "Modern Deployment",
-      description: "Vercel + Render with proxy configuration"
+      description: "Maintained deployment templates with documented verification steps"
     }
   ];
 
   const stats = [
-    { value: "Claude 3.5", label: "AI Model" },
+    { value: "SQLite", label: "Local Engine" },
     { value: "FastAPI", label: "Backend Framework" },
     { value: "Next.js 15", label: "Frontend" },
     { value: "TypeScript", label: "Type Safety" }
@@ -70,7 +69,7 @@ export default function Home() {
               <Link href="/demo" className="text-white hover:text-blue-400 transition">
                 Demo
               </Link>
-              <Link href="https://sql-genius-api.onrender.com/docs" target="_blank" rel="noopener noreferrer" className="text-white hover:text-blue-400 transition">
+              <Link href="/metrics" className="text-white hover:text-blue-400 transition">
                 API Docs
               </Link>
               <Link
@@ -106,8 +105,8 @@ export default function Home() {
           </h1>
           
           <p className="text-gray-300 text-lg max-w-2xl mx-auto mb-8">
-            Portfolio demo showcasing AI-powered SQL generation using Claude AI. 
-            Features real LLM integration, type-safe architecture, and production-ready patterns.
+            Natural-language SQL and analytics playground with optional provider generation.
+            Explore deterministic sample schemas, inspect SQL, and run supported queries locally in SQLite.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -152,7 +151,7 @@ export default function Home() {
             AI Engineering Skills Demonstrated
           </h2>
           <p className="text-gray-300 mb-12 max-w-2xl mx-auto">
-            This portfolio project demonstrates production-ready AI engineering patterns
+            This portfolio project demonstrates applied AI and analytics engineering patterns
           </p>
         </motion.div>
         
@@ -193,7 +192,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">FastAPI Backend</h3>
               <p className="text-gray-400 text-sm">
-                High-performance async Python API with automatic OpenAPI documentation
+                Optional typed generation API; provider output is returned as not executed
               </p>
             </div>
             
@@ -201,9 +200,9 @@ export default function Home() {
               <div className="w-20 h-20 bg-purple-600/20 rounded-full mx-auto mb-4 flex items-center justify-center">
                 <Database className="w-10 h-10 text-purple-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">PostgreSQL + Redis</h3>
+              <h3 className="text-xl font-semibold text-white mb-2">Browser SQLite</h3>
               <p className="text-gray-400 text-sm">
-                Scalable data persistence with caching for optimal performance
+                Deterministic synthetic schemas with explicit, read-only local execution
               </p>
             </div>
             
@@ -211,9 +210,9 @@ export default function Home() {
               <div className="w-20 h-20 bg-green-600/20 rounded-full mx-auto mb-4 flex items-center justify-center">
                 <Gauge className="w-10 h-10 text-green-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Real-Time Monitoring</h3>
+              <h3 className="text-xl font-semibold text-white mb-2">Visible Provenance</h3>
               <p className="text-gray-400 text-sm">
-                Prometheus metrics, Grafana dashboards, and comprehensive logging
+                Generation source, schema, execution status, and truncation stay visible
               </p>
             </div>
           </div>
@@ -229,10 +228,10 @@ export default function Home() {
           className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-12 text-center"
         >
           <h2 className="text-4xl font-bold text-white mb-4">
-            Ready to Transform Your Data Queries?
+            Explore an Inspectable SQL Workflow
           </h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Join thousands of developers and analysts using SQL Genius AI to accelerate their workflow
+            Choose a sample schema, inspect curated or generated SQL, then run it explicitly against local fixture data.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -263,9 +262,7 @@ export default function Home() {
             Portfolio Demo Notice
           </h3>
           <p className="text-gray-300 text-sm">
-            This is a demonstration project showcasing AI engineering capabilities. 
-            The SQL generation uses real Claude AI integration, but metrics are simulated 
-            and SQL execution is sandboxed for demo purposes. View the full implementation 
+            This portfolio project demonstrates analytics and applied-AI engineering. Curated examples need no key; optional live generation requires configured backend credentials. Accepted SQL executes locally only against bundled synthetic sample data. No aggregate usage or model-accuracy metrics are claimed. View the full implementation
             at{' '}
             <a 
               href="https://github.com/cbratkovics/sql-genius-ai" 

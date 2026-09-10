@@ -1,4 +1,5 @@
 import type { SchemaTemplate } from '@/data/schemas';
+import { checkReadOnlyPolicy } from './policy';
 
 // Type definitions for sql.js
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,7 +28,7 @@ export class SQLDatabase {
       // Dynamic import to avoid server-side issues
       const initSqlJs: InitSqlJs = (await import('sql.js')).default;
       this.SQL = await initSqlJs({
-        locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+        locateFile: (file: string) => `/${file}`,
       });
     } catch (error) {
       console.error('Failed to initialize SQL.js:', error);
@@ -87,28 +88,40 @@ export class SQLDatabase {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     values: any[][];
     rowCount: number;
+    truncated: boolean;
   }> {
     if (!this.db) {
       throw new Error('No database loaded. Please select a schema first.');
     }
 
+    const policy = checkReadOnlyPolicy(sql);
+    if (!policy.accepted) throw new Error(`Query blocked: ${policy.reason}`);
+    const MAX_ROWS = 500;
+    const MAX_RESULT_BYTES = 1_000_000;
+    let statement: ReturnType<Database['prepare']> | null = null;
     try {
-      const results = this.db.exec(sql);
-
-      if (results.length === 0) {
-        return { columns: [], values: [], rowCount: 0 };
+      // Preparation delegates SQLite syntax/name checking to the actual execution engine.
+      statement = this.db.prepare(sql);
+      const columns = statement.getColumnNames();
+      const values: unknown[][] = [];
+      let bytes = 0;
+      while (values.length < MAX_ROWS && statement.step()) {
+        const row = statement.get();
+        bytes += row.reduce((total: number, value: unknown) => total + String(value ?? '').length, 0);
+        if (bytes > MAX_RESULT_BYTES) throw new Error('Result preview exceeds the 1 MB collection limit.');
+        values.push(row);
       }
-
-      const result = results[0];
+      const truncated = values.length === MAX_ROWS && statement.step();
       return {
-        columns: result.columns,
-        values: result.values,
-        rowCount: result.values.length,
+        columns,
+        values,
+        rowCount: values.length,
+        truncated,
       };
     } catch (error) {
       console.error('Query execution error:', error);
       throw new Error(`SQL Error: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    } finally { statement?.free(); }
   }
 
   /**

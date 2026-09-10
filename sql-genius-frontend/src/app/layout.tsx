@@ -1,12 +1,9 @@
 'use client';
 
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { useState } from 'react';
-
-const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
   children,
@@ -25,10 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>SQL Genius AI - Transform Natural Language to SQL</title>
-        <meta name="description" content="Enterprise-grade AI-powered SQL generation platform" />
+        <title>SQL Genius AI | Natural-Language SQL and Analytics Playground</title>
+        <meta name="description" content="Inspect schema-aware SQL and run supported read-only queries locally against deterministic sample data." />
       </head>
-      <body className={inter.className}>
+      <body className="font-sans">
         <QueryClientProvider client={queryClient}>
           {children}
           <Toaster

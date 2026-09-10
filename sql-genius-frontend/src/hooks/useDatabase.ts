@@ -104,6 +104,7 @@ export function useSQLQuery() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     values: any[][];
     rowCount: number;
+    truncated: boolean;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
