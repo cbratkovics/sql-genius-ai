@@ -6,7 +6,11 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "prepare:sql-wasm": "node scripts/prepare-sql-wasm.mjs",
+    "predev": "npm run prepare:sql-wasm",
+    "prebuild": "npm run prepare:sql-wasm"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

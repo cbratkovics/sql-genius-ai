@@ -2,112 +2,44 @@ export async function post<T>(path: string, body?: unknown, init?: RequestInit):
   const res = await fetch(`/api${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-    body: body ? JSON.stringify(body) : undefined,
-    ...init
-  });
-  if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
-  return res.json() as Promise<T>;
-}
-
-export async function get<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-    ...init
-  });
-  if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
-  return res.json() as Promise<T>;
-}
-
-// Helper to add auth token
-export function withAuth(init?: RequestInit): RequestInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  return {
+    body: body === undefined ? undefined : JSON.stringify(body),
     ...init,
-    headers: {
-      ...(init?.headers ?? {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
-  };
+  });
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null) as { detail?: string } | null;
+    throw new Error(payload?.detail ?? `API request failed (${res.status}).`);
+  }
+  return res.json() as Promise<T>;
 }
 
-// Type definitions
 export interface SQLGenerationResult {
-  success: boolean;
+  success: true;
   sql: string;
   explanation: string;
-  confidence_score: number;
-  performance: {
-    generation_time_ms: number;
-    tokens_used: number;
+  assumptions: string[];
+  metadata: {
+    source: 'provider';
+    provider: string;
     model: string;
-    cached: boolean;
+    dialect: 'sqlite';
+    schema_id: string;
+    response_parsed: boolean;
+    policy_status: 'not_checked';
+    execution_status: 'not_run';
+    provider_round_trip_ms: number;
+    input_tokens: number | null;
+    output_tokens: number | null;
   };
-  security: {
-    injection_safe: boolean;
-    validated: boolean;
-    sandbox_tested: boolean;
-  };
 }
 
-export interface SandboxExecuteResult {
-  success: boolean;
-  sample_results: Array<Record<string, unknown>>;
-  rows_affected: number;
-  columns: string[];
-  execution_time_ms: number;
+export interface GenerationSchema {
+  id: string;
+  dialect: 'sqlite';
+  tables: Array<{ name: string; columns: Array<{ name: string; type: string }> }>;
+  relationships: Array<{ source: string; target: string }>;
 }
 
-export interface Schema {
-  name: string;
-  description: string;
-  tables: Array<{
-    name: string;
-    columns: Array<{
-      name: string;
-      type: string;
-    }>;
-  }>;
-}
-
-export interface SampleQuery {
-  title: string;
-  query: string;
-  description: string;
-  category: string;
-}
-
-export interface DemoMetrics {
-  total_queries_today: number;
-  avg_response_time_ms: number;
-  success_rate: number;
-  active_users: number;
-  queries_last_hour: number[];  // Array of 24 hourly query counts
-  popular_queries: string[];
-}
-
-// Demo API endpoints using relative paths
 export const demoApi = {
-  generateSQL: async (query: string, schemaContext?: string): Promise<SQLGenerationResult> => {
-    return post<SQLGenerationResult>('/v1/demo/sql-generate', {
-      query,
-      schema_context: schemaContext,
-    }, withAuth());
-  },
-
-  getMetrics: async (): Promise<DemoMetrics> => {
-    return get<DemoMetrics>('/v1/demo/metrics', withAuth());
-  },
-
-  executeSandbox: async (sql: string): Promise<SandboxExecuteResult> => {
-    return post<SandboxExecuteResult>('/v1/demo/execute-sandbox', { sql }, withAuth());
-  },
-
-  getSchemaTemplates: async (): Promise<Schema[]> => {
-    return get<Schema[]>('/v1/demo/schema-templates', withAuth());
-  },
-
-  getSampleQueries: async (): Promise<SampleQuery[]> => {
-    return get<SampleQuery[]>('/v1/demo/sample-queries', withAuth());
-  },
+  generateSQL: (query: string, schema: GenerationSchema): Promise<SQLGenerationResult> =>
+    post<SQLGenerationResult>('/v1/demo/sql-generate', { query, schema }),
 };
