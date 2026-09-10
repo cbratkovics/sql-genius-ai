@@ -19,8 +19,6 @@ jobs:
       - run: pip install ruff pytest mypy
       - run: ruff check .
       - run: mypy --install-types --non-interactive || true
-      # The public demo contract is the maintained no-external-service CI path.
-      # Legacy account integration tests require their own service setup.
-      - run: pytest -q test_demo_contract.py
+      - run: pytest -q
         env:
           PYTHONPATH: ${{ github.workspace }}
