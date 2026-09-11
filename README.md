@@ -2,7 +2,7 @@
 
 **Natural-Language SQL and Analytics Playground**
 
-SQL Genius AI demonstrates an inspectable analytics workflow: select and inspect a deterministic sample schema, express a question or choose a curated example, review/edit SQL, explicitly run an accepted read-only query in browser SQLite, and inspect/export the preview. An optional FastAPI integration can request schema-aware SQLite SQL from Anthropic; it never executes provider output automatically.
+SQL Genius AI demonstrates an inspectable analytics workflow: select and inspect a deterministic sample schema, express a question or choose a curated example, review/edit SQL, explicitly run an accepted read-only query in browser SQLite, and inspect/export the preview. Generation now runs entirely in the browser with no account, API key, backend, or per-request cost.
 
 ## Capability and evidence
 
@@ -10,16 +10,16 @@ SQL Genius AI demonstrates an inspectable analytics workflow: select and inspect
 |---|---|---|
 | Deterministic sample schemas and curated SQL | Implemented; exercised by local browser build | `sql-genius-frontend/src/data/` |
 | Browser SQLite execution | Implemented with statement policy, engine preparation, and preview bounds | `src/lib/sql/database.ts`, `src/lib/sql/policy.ts` |
-| Schema-aware generation request | Implemented; stubbed contract tests authored (not run here) | `backend/api/demo.py`, `backend/test_demo_contract.py` |
-| Live Anthropic generation | Optional; requires server-only credentials; not called in repository checks | `backend/services/anthropic_service.py` |
+| Zero-cost schema-aware generation | Implemented locally with reviewed-intent retrieval and a conservative schema fallback | `src/lib/sql/local-generator.ts`, `tests/local-generator.test.ts` |
+| Legacy Anthropic backend route | Retained for compatibility; not used by the playground | `backend/api/demo.py`, `backend/services/anthropic_service.py` |
 | Account, cache, task, billing, and operations modules | Reference/optional code; not required by the public playground and not deployment evidence | `backend/services/`, `backend/tasks/` |
 | Hosted deployments | Unverified in this cleanup | `DEPLOYMENT.md` |
 
 ## Flow and provenance
 
 1. The selected fixture defines the exact tables, columns, types, and relationships.
-2. Choosing a **Curated example** loads reviewed fixture SQL. Choosing **Generate** sends the schema structure, schema ID, dialect (`sqlite`), and question to `/api/v1/demo/sql-generate`.
-3. Provider responses must be structured JSON with non-empty SQL, an explanation, and assumptions. Missing configuration and upstream/malformed responses are errors; there is no silent mock fallback.
+2. Choosing a **Curated example** loads reviewed fixture SQL. Choosing **Generate** matches the question against the selected schema's reviewed query library in the browser. Novel requests receive a conservative table preview or row-count query rather than invented joins or business logic.
+3. The UI explains whether it selected a reviewed intent or used the conservative fallback, shows match confidence and assumptions, and makes no network generation request.
 4. Generation and Run are separate. At Run, the browser policy accepts one `SELECT` or read-only CTE and rejects mutation/schema/policy commands before SQLite preparation.
 5. SQLite executes against synthetic fixture rows. Results are a preview capped at 500 rows and 1 MB. The UI attaches the source, dataset, execution state, and truncation state to the displayed SQL.
 
@@ -37,7 +37,9 @@ npm run dev
 
 Open `http://localhost:3000/demo`, choose **Sample Queries**, load a curated query, inspect it, then click **Execute**. Before development and production builds, a preparation script copies the matching WASM file from the locked `sql.js` package into the ignored `public/sql-wasm.wasm` runtime path. No binary is committed, and no CDN or API key is required for this path.
 
-## Optional generation backend
+## Legacy optional generation backend
+
+The public playground does not need this service. The route remains available for compatibility or private deployments that intentionally want provider-backed generation.
 
 Use Python 3.11 (the pinned backend dependencies predate newer Python releases):
 
@@ -50,7 +52,7 @@ export ANTHROPIC_API_KEY=...
 uvicorn backend.main:app --reload
 ```
 
-Set the frontend reverse proxy/environment according to its Next configuration. `ANTHROPIC_API_KEY` is server-only; never create a `NEXT_PUBLIC_` key. `ANTHROPIC_MODEL` is configurable and defaults to the model identifier retained for compatibility with the pinned SDK.
+`ANTHROPIC_API_KEY` is server-only; never create a `NEXT_PUBLIC_` key. `ANTHROPIC_MODEL` is configurable and defaults to the model identifier retained for compatibility with the pinned SDK.
 
 Mounted public routes are `/`, `/health`, and routes under `/api/v1` from `auth`, `users`, and `demo`. The generation contract is:
 
@@ -68,7 +70,7 @@ pytest -q backend/test_demo_contract.py
 cd sql-genius-frontend && npm run lint && npm run build
 ```
 
-These checks cover contracts and deterministic implementation behavior, not live-model text-to-SQL accuracy. See [`docs/PORTFOLIO_EVIDENCE.md`](docs/PORTFOLIO_EVIDENCE.md) for evidence categories, limitations, and external follow-up copy.
+These checks cover contracts and deterministic implementation behavior. The local generator intentionally favors predictable, reviewed SQL over pretending to understand ambiguous business questions. See [`docs/PORTFOLIO_EVIDENCE.md`](docs/PORTFOLIO_EVIDENCE.md) for evidence categories, limitations, and external follow-up copy.
 
 ## Repository map
 

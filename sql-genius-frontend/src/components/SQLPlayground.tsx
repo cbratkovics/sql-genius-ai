@@ -16,7 +16,6 @@ import {
   ChevronDown
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
-import { useGenerateSQL } from '@/hooks/useDemo';
 import { useDatabase, useSQLQuery } from '@/hooks/useDatabase';
 import { schemas } from '@/data/schemas';
 import { getQueriesBySchema } from '@/data/queries';
@@ -26,7 +25,7 @@ import * as Tabs from '@radix-ui/react-tabs';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { rowsToCsv } from '@/lib/csv';
-import type { SQLGenerationResult } from '@/lib/api';
+import { generateLocalSQL, type LocalGenerationResult } from '@/lib/sql/local-generator';
 
 export default function SQLPlayground() {
   const [query, setQuery] = useState('');
@@ -34,11 +33,11 @@ export default function SQLPlayground() {
   const [selectedSchemaId, setSelectedSchemaId] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('playground');
-  const [generation, setGeneration] = useState<SQLGenerationResult | null>(null);
-  const [sqlSource, setSqlSource] = useState<'curated' | 'provider' | null>(null);
+  const [generation, setGeneration] = useState<LocalGenerationResult | null>(null);
+  const [sqlSource, setSqlSource] = useState<'curated' | 'local' | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const requestSequence = useRef(0);
 
-  const generateSQL = useGenerateSQL();
   const database = useDatabase();
   const sqlQuery = useSQLQuery();
 
@@ -72,29 +71,19 @@ export default function SQLPlayground() {
       return;
     }
 
-    try {
-      const sequence = ++requestSequence.current;
-      const result = await generateSQL.mutateAsync({
-        query,
-        schema: {
-          id: currentSchema.id, dialect: 'sqlite',
-          tables: currentSchema.tables.map((table) => ({ name: table.name, columns: table.columns.map(({ name, type }) => ({ name, type })) })),
-          relationships: currentSchema.relationships.map((relationship) => ({
-            source: `${relationship.from.table}.${relationship.from.column}`,
-            target: `${relationship.to.table}.${relationship.to.column}`,
-          })),
-        },
-      });
-
-      if (result.success && sequence === requestSequence.current && result.metadata.schema_id === currentSchema.id) {
-        setGeneratedSQL(result.sql);
-        setGeneration(result);
-        setSqlSource('provider');
-        sqlQuery.reset();
-      }
-    } catch (error) {
-      console.error('SQL generation error:', error);
+    const sequence = ++requestSequence.current;
+    setIsGenerating(true);
+    // Yield once so loading feedback is painted even though generation is local and fast.
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+    const result = generateLocalSQL(query, currentSchema, getQueriesBySchema(currentSchema.id));
+    if (sequence === requestSequence.current) {
+      setGeneratedSQL(result.sql);
+      setGeneration(result);
+      setSqlSource('local');
+      sqlQuery.reset();
+      toast.success('SQL generated locally. Review it before running.');
     }
+    setIsGenerating(false);
   };
 
   const handleCopySQL = () => {
@@ -254,7 +243,7 @@ export default function SQLPlayground() {
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-400" />
                     <span className="text-sm text-green-300">
-                      Curated examples work without a key. Live generation requires the optional backend provider; generated SQL is never run automatically.
+                      Free local generation works without an account, API key, backend, or usage fees. Generated SQL is never run automatically.
                     </span>
                   </div>
                 </div>
@@ -276,15 +265,15 @@ export default function SQLPlayground() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleGenerate}
-                      disabled={!query.trim() || generateSQL.isPending || !database.isReady()}
+                      disabled={!query.trim() || isGenerating || !database.isReady()}
                       className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
                     >
-                      {generateSQL.isPending ? (
+                      {isGenerating ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
                       ) : (
                         <Sparkles className="w-5 h-5" />
                       )}
-                      <span>{generateSQL.isPending ? 'Generating...' : 'Generate SQL with AI'}</span>
+                      <span>{isGenerating ? 'Generating locally...' : 'Generate SQL with AI — Free'}</span>
                     </motion.button>
                   </div>
 
@@ -354,18 +343,18 @@ export default function SQLPlayground() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
                         <div className="text-gray-400 text-sm mb-1">Source</div>
-                        <div className="text-lg font-bold text-blue-300">{generation.metadata.provider} / {generation.metadata.model}</div>
+                        <div className="text-lg font-bold text-blue-300">Local schema engine</div>
                       </div>
                       <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
-                        <div className="text-gray-400 text-sm mb-1">Provider round trip</div>
-                        <div className="text-lg font-bold text-blue-400">{generation.metadata.provider_round_trip_ms.toFixed(0)} ms</div>
+                        <div className="text-gray-400 text-sm mb-1">Cost & privacy</div>
+                        <div className="text-lg font-bold text-green-400">$0 · stays in browser</div>
                       </div>
                     </div>
                     <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
                       <div className="text-gray-400 text-sm mb-2">Explanation</div>
                       <p className="text-white">{generation.explanation}</p>
                       {generation.assumptions.length > 0 && <p className="text-sm text-amber-200 mt-2">Assumptions: {generation.assumptions.join('; ')}</p>}
-                      <p className="text-xs text-gray-400 mt-2">Response parsed; execution policy and correctness have not yet been evaluated.</p>
+                      <p className="text-xs text-gray-400 mt-2">{generation.match === 'curated-intent' ? 'Reviewed intent match' : 'Conservative schema fallback'} · {Math.round(generation.confidence * 100)}% match confidence. Review before execution.</p>
                     </div>
                   </motion.div>
                 )}
