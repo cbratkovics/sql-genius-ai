@@ -45,7 +45,7 @@ ORDER BY total_mrr DESC;`,
     difficulty: 'intermediate',
     naturalLanguage: 'Show user activity with last login dates',
     sql: `SELECT u.user_id, u.email, u.role, o.name AS org_name, u.last_login,
-       julianday('now') - julianday(u.last_login) AS days_since_login
+       julianday('2024-07-01') - julianday(u.last_login) AS days_since_login
 FROM users u
 JOIN organizations o ON u.org_id = o.org_id
 ORDER BY u.last_login DESC;`,
@@ -74,14 +74,15 @@ ORDER BY o.plan, usage_count DESC;`,
     schemaId: 'saas',
     category: 'business_intelligence',
     difficulty: 'advanced',
-    naturalLanguage: 'Calculate customer churn risk score',
+    naturalLanguage: 'Flag organizations using a rule-based inactivity indicator as of 2024-07-01',
     sql: `SELECT o.org_id, o.name, o.plan, s.status,
        COUNT(DISTINCT u.user_id) AS user_count,
        MAX(u.last_login) AS most_recent_login,
-       julianday('now') - julianday(MAX(u.last_login)) AS days_inactive,
+       julianday('2024-07-01') - julianday(MAX(u.last_login)) AS days_inactive,
        CASE
-         WHEN s.status = 'trialing' AND julianday('now') - julianday(MAX(u.last_login)) > 7 THEN 'High Risk'
-         WHEN julianday('now') - julianday(MAX(u.last_login)) > 14 THEN 'Medium Risk'
+         WHEN MAX(u.last_login) IS NULL THEN 'No Activity History'
+         WHEN s.status = 'trialing' AND julianday('2024-07-01') - julianday(MAX(u.last_login)) > 7 THEN 'High Inactivity'
+         WHEN julianday('2024-07-01') - julianday(MAX(u.last_login)) > 14 THEN 'Medium Inactivity'
          ELSE 'Low Risk'
        END AS churn_risk
 FROM organizations o
@@ -89,16 +90,16 @@ JOIN subscriptions s ON o.org_id = s.org_id
 LEFT JOIN users u ON o.org_id = u.org_id
 GROUP BY o.org_id, o.name, o.plan, s.status
 ORDER BY days_inactive DESC;`,
-    description: 'Churn prediction model',
-    explanation: 'Complex CASE statement creates risk scores based on inactivity patterns',
-    tags: ['churn analysis', 'case when', 'risk scoring'],
+    description: 'Illustrative inactivity rules, not churn prediction',
+    explanation: 'Deterministic CASE rules as of 2024-07-01 keep missing activity distinct; they do not predict churn.',
+    tags: ['inactivity', 'case when', 'rule based'],
   },
   {
     id: 'saas-007',
     schemaId: 'saas',
     category: 'business_intelligence',
     difficulty: 'advanced',
-    naturalLanguage: 'Show feature adoption rate by organization size',
+    naturalLanguage: 'Count unique feature users by organization size',
     sql: `WITH org_sizes AS (
   SELECT org_id,
          CASE
@@ -115,9 +116,9 @@ JOIN users u ON ue.user_id = u.user_id
 JOIN org_sizes os ON u.org_id = os.org_id
 GROUP BY os.org_size, ue.feature_name
 ORDER BY os.org_size, unique_users DESC;`,
-    description: 'Feature adoption by company size',
-    explanation: 'Uses CTE (Common Table Expression) to categorize organizations, then analyzes feature usage',
-    tags: ['cte', 'with clause', 'feature adoption'],
+    description: 'Unique feature-user counts by organization size',
+    explanation: 'Counts distinct users with events. No eligible-user denominator is available, so this is not an adoption rate.',
+    tags: ['cte', 'with clause', 'unique users'],
   },
   {
     id: 'saas-008',
@@ -128,7 +129,7 @@ ORDER BY os.org_size, unique_users DESC;`,
     sql: `SELECT u.user_id, u.email, u.role, o.name AS org_name, u.last_login
 FROM users u
 JOIN organizations o ON u.org_id = o.org_id
-WHERE julianday('now') - julianday(u.last_login) > 30
+WHERE julianday('2024-07-01') - julianday(u.last_login) > 30
 ORDER BY u.last_login ASC;`,
     description: 'Identify inactive users for re-engagement',
     explanation: 'Date calculation to find users beyond activity threshold',
@@ -158,9 +159,9 @@ ORDER BY total_api_calls DESC;`,
     schemaId: 'saas',
     category: 'business_intelligence',
     difficulty: 'advanced',
-    naturalLanguage: 'Show subscription conversion funnel',
+    naturalLanguage: 'Show current subscription status distribution',
     sql: `SELECT s.status,
-       COUNT(*) AS org_count,
+       COUNT(*) AS subscription_count,
        SUM(s.monthly_price) AS total_revenue,
        ROUND(AVG(s.monthly_price), 2) AS avg_price,
        ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS percentage
@@ -172,8 +173,8 @@ ORDER BY
     WHEN 'active' THEN 2
     WHEN 'cancelled' THEN 3
   END;`,
-    description: 'Subscription status funnel analysis',
-    explanation: 'Window function calculates percentage distribution of subscription statuses',
-    tags: ['window functions', 'funnel analysis', 'conversion'],
+    description: 'Subscription status snapshot distribution',
+    explanation: 'Counts subscription rows by current status. Without status history this is not a longitudinal conversion funnel or organization count.',
+    tags: ['window functions', 'snapshot', 'subscriptions'],
   },
 ];

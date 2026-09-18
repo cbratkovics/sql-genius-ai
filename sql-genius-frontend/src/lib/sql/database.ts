@@ -46,14 +46,11 @@ export class SQLDatabase {
     }
 
     try {
-      // Create new database (or reset existing one)
-      if (this.db) {
-        this.db.close();
-      }
-      this.db = new this.SQL.Database();
+      // Build into a temporary database. A partial fixture must never become ready.
+      const nextDb = new this.SQL.Database();
 
       // Execute DDL to create tables
-      this.db.exec(schema.ddl);
+      nextDb.exec(schema.ddl);
 
       // Insert sample data for each table
       for (const [tableName, rows] of Object.entries(schema.sampleData)) {
@@ -64,7 +61,7 @@ export class SQLDatabase {
         const placeholders = columns.map(() => '?').join(', ');
         const insertSQL = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders})`;
 
-        const stmt = this.db.prepare(insertSQL);
+        const stmt = nextDb.prepare(insertSQL);
         for (const row of rows) {
           const values = columns.map((col) => row[col]);
           stmt.run(values);
@@ -72,10 +69,15 @@ export class SQLDatabase {
         stmt.free();
       }
 
+      this.db?.close();
+      this.db = nextDb;
       this.currentSchema = schema.id;
       console.log(`Schema "${schema.name}" loaded successfully`);
     } catch (error) {
       console.error('Failed to load schema:', error);
+      this.db?.close();
+      this.db = null;
+      this.currentSchema = null;
       throw new Error(`Could not load schema: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -107,7 +109,7 @@ export class SQLDatabase {
       let bytes = 0;
       while (values.length < MAX_ROWS && statement.step()) {
         const row = statement.get();
-        bytes += row.reduce((total: number, value: unknown) => total + String(value ?? '').length, 0);
+        bytes += row.reduce((total: number, value: unknown) => total + new TextEncoder().encode(String(value ?? '')).byteLength, 0);
         if (bytes > MAX_RESULT_BYTES) throw new Error('Result preview exceeds the 1 MB collection limit.');
         values.push(row);
       }

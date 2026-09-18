@@ -25,7 +25,7 @@ import * as Tabs from '@radix-ui/react-tabs';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { rowsToCsv } from '@/lib/csv';
-import { generateLocalSQL, type LocalGenerationResult } from '@/lib/sql/local-generator';
+import { generateLocalSQL, resolveBestCustomers, type LocalGenerationResult, type ClarificationOption } from '@/lib/sql/local-generator';
 
 export default function SQLPlayground() {
   const [query, setQuery] = useState('');
@@ -36,6 +36,7 @@ export default function SQLPlayground() {
   const [generation, setGeneration] = useState<LocalGenerationResult | null>(null);
   const [sqlSource, setSqlSource] = useState<'curated' | 'local' | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [executedSQL, setExecutedSQL] = useState<string | null>(null);
   const requestSequence = useRef(0);
 
   const database = useDatabase();
@@ -55,6 +56,7 @@ export default function SQLPlayground() {
     setGeneration(null);
     setSqlSource(null);
     sqlQuery.reset();
+    setExecutedSQL(null);
     await database.loadSchema(schema);
     setSelectedSchemaId(schema.id);
   };
@@ -77,11 +79,12 @@ export default function SQLPlayground() {
     await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
     const result = generateLocalSQL(query, currentSchema, getQueriesBySchema(currentSchema.id));
     if (sequence === requestSequence.current) {
-      setGeneratedSQL(result.sql);
+      setGeneratedSQL(result.kind === 'supported' || result.kind === 'exploration' ? result.sql : '');
       setGeneration(result);
       setSqlSource('local');
       sqlQuery.reset();
-      toast.success('SQL generated locally. Review it before running.');
+      setExecutedSQL(null);
+      if (result.kind === 'supported') toast.success('Reviewed SQL selected. Review it before running.');
     }
     setIsGenerating(false);
   };
@@ -105,6 +108,7 @@ export default function SQLPlayground() {
 
     try {
       await sqlQuery.execute(generatedSQL);
+      setExecutedSQL(generatedSQL);
     } catch (error) {
       console.error('Execution error:', error);
     }
@@ -116,6 +120,7 @@ export default function SQLPlayground() {
     setGeneration(null);
     setSqlSource('curated');
     sqlQuery.reset();
+    setExecutedSQL(null);
     setActiveTab('playground');
   };
 
@@ -174,7 +179,7 @@ export default function SQLPlayground() {
                 <Database className="w-8 h-8 text-white" />
                 <div>
                   <h1 className="text-3xl font-bold text-white">SQL Playground</h1>
-                  <p className="text-blue-100 text-sm mt-1">Interactive SQL environment with AI-powered generation</p>
+                  <p className="text-blue-100 text-sm mt-1">Reviewed templates, explicit execution, and visible evidence</p>
                 </div>
               </div>
               <div className="text-sm text-white bg-white/20 rounded-full px-4 py-2">SQLite sample data</div>
@@ -273,7 +278,7 @@ export default function SQLPlayground() {
                       ) : (
                         <Sparkles className="w-5 h-5" />
                       )}
-                      <span>{isGenerating ? 'Generating locally...' : 'Generate SQL with AI — Free'}</span>
+                      <span>{isGenerating ? 'Matching locally...' : 'Select reviewed SQL locally'}</span>
                     </motion.button>
                   </div>
 
@@ -309,7 +314,7 @@ export default function SQLPlayground() {
                         height="160px"
                         defaultLanguage="sql"
                         value={generatedSQL}
-                        onChange={(value) => { setGeneratedSQL(value || ''); setGeneration(null); sqlQuery.reset(); }}
+                        onChange={(value) => { setGeneratedSQL(value || ''); setGeneration(null); setSqlSource('local'); setExecutedSQL(null); sqlQuery.reset(); }}
                         theme="vs-dark"
                         options={{
                           minimap: { enabled: false },
@@ -353,8 +358,10 @@ export default function SQLPlayground() {
                     <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
                       <div className="text-gray-400 text-sm mb-2">Explanation</div>
                       <p className="text-white">{generation.explanation}</p>
+                      {generation.kind === 'clarification' && generation.options.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{generation.options.map((option: ClarificationOption) => <button key={option.id} onClick={() => { const resolved = resolveBestCustomers(option.id); setGeneration(resolved); setGeneratedSQL(resolved.kind === 'supported' ? resolved.sql : ''); sqlQuery.reset(); }} className="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-500 focus:ring-2 focus:ring-white">{option.label}<span className="block text-xs text-blue-100">{option.population} · {option.period}</span></button>)}</div>}
+                      {generation.kind === 'unsupported' && <p className="mt-2 text-sm text-red-200">Missing evidence: {generation.missing.join(' ')}</p>}
                       {generation.assumptions.length > 0 && <p className="text-sm text-amber-200 mt-2">Assumptions: {generation.assumptions.join('; ')}</p>}
-                      <p className="text-xs text-gray-400 mt-2">{generation.match === 'curated-intent' ? 'Reviewed intent match' : 'Conservative schema fallback'} · {Math.round(generation.confidence * 100)}% match confidence. Review before execution.</p>
+                      <p className="text-xs text-gray-400 mt-2">Status: {generation.kind}. Retrieval overlap is not a correctness probability. Review before execution.</p>
                     </div>
                   </motion.div>
                 )}
@@ -404,6 +411,11 @@ export default function SQLPlayground() {
                       <span>{sqlQuery.results.rowCount} preview rows{sqlQuery.results.truncated ? ' (truncated)' : ''}</span>
                       <span className="text-green-400">Executed locally with SQLite · {sqlSource === 'curated' ? 'curated SQL' : 'edited/generated SQL'}</span>
                     </div>
+                    <details className="mt-3 text-sm text-gray-300">
+                      <summary className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400">Execution provenance</summary>
+                      <p className="mt-2">Dataset: {currentSchema?.name} ({currentSchema?.version ?? 'unversioned'}). Rows shown are the bounded executed snapshot{sqlQuery.results.truncated ? ', not a complete export' : ''}.</p>
+                      <pre className="mt-2 overflow-x-auto rounded bg-gray-950 p-3 text-xs">{executedSQL}</pre>
+                    </details>
                   </motion.div>
                 )}
               </Tabs.Content>

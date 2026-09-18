@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import initSqlJs from 'sql.js';
+import { ecommerceSchema } from '../src/data/schemas/ecommerce.ts';
+import { ecommerceQueries } from '../src/data/queries/ecommerce-queries.ts';
+import { saasQueries } from '../src/data/queries/saas-queries.ts';
+
+test('e-commerce relationship metadata follows child foreign key to one parent',()=>{for(const relation of ecommerceSchema.relationships) assert.equal(relation.type,'many-to-one')});
+test('fixture independently distinguishes lines, units, and parent fan-out',()=>{const items=ecommerceSchema.sampleData.order_items;const order7=items.filter(row=>row.order_id===7);assert.equal(order7.length,3);assert.equal(order7.reduce((sum,row)=>sum+Number(row.quantity),0),8);const order1=ecommerceSchema.sampleData.orders.find(row=>row.order_id===1)!;assert.equal(order1.total_amount,1329.98);assert.equal(order7.length * Number(order1.total_amount),3989.94,'joining one header value to three child rows triples it')});
+test('corrected query language agrees with formulas',()=>{const ten=ecommerceQueries.find(q=>q.id==='ecom-010')!;assert.match(ten.sql,/SUM\(oi.quantity\)/);assert.match(ten.sql,/line_count/);const fourteen=ecommerceQueries.find(q=>q.id==='ecom-014')!;assert.doesNotMatch(`${fourteen.naturalLanguage} ${fourteen.description}`,/profit/i);assert.match(fourteen.sql,/SUM\(oi.quantity\)/);const churn=saasQueries.find(q=>q.id==='saas-006')!;assert.match(churn.sql,/No Activity History/);assert.doesNotMatch(churn.sql,/julianday\('now'\)/);const adoption=saasQueries.find(q=>q.id==='saas-007')!;assert.doesNotMatch(adoption.naturalLanguage,/rate/i);assert.match(saasQueries.find(q=>q.id==='saas-010')!.naturalLanguage,/distribution/i)});
+test('all e-commerce curated SQL executes against the fixture',async()=>{const SQL=await initSqlJs();const db=new SQL.Database();db.exec(ecommerceSchema.ddl);for(const [table,rows] of Object.entries(ecommerceSchema.sampleData)){for(const row of rows){const columns=Object.keys(row);const stmt=db.prepare(`INSERT INTO ${table} (${columns.join(',')}) VALUES (${columns.map(()=>'?').join(',')})`);stmt.run(columns.map(c=>row[c]));stmt.free()}}for(const query of ecommerceQueries) assert.doesNotThrow(()=>db.exec(query.sql),query.id);db.close()});

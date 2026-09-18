@@ -1,41 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateLocalSQL } from '../src/lib/sql/local-generator.ts';
+import { generateLocalSQL, resolveBestCustomers } from '../src/lib/sql/local-generator.ts';
 import type { SchemaTemplate } from '../src/data/schemas/types.ts';
 import type { SampleQuery } from '../src/data/queries/types.ts';
-
-const schema = {
-  id: 'test',
-  name: 'Test',
-  description: 'Test data',
-  category: 'saas',
-  difficulty: 'beginner',
-  icon: 'T',
-  ddl: '',
-  sampleData: {},
-  relationships: [],
-  tables: [
-    { name: 'organizations', columns: [{ name: 'org_id', type: 'INTEGER' }, { name: 'name', type: 'TEXT' }] },
-    { name: 'usage_events', columns: [{ name: 'event_id', type: 'INTEGER' }] },
-  ],
-} satisfies SchemaTemplate;
-
-const samples = [{
-  id: 'test-1', schemaId: 'test', category: 'basic', difficulty: 'beginner',
-  naturalLanguage: 'Show all organizations', sql: 'SELECT * FROM organizations;',
-  description: 'List organizations', explanation: 'List all', tags: ['organizations'],
-}] satisfies SampleQuery[];
-
-test('returns reviewed SQL for exact and closely matching intents', () => {
-  assert.equal(generateLocalSQL('Show all organizations', schema, samples).sql, 'SELECT * FROM organizations;');
-  assert.equal(generateLocalSQL('list organizations', schema, samples).match, 'curated-intent');
-});
-
-test('creates conservative schema-aware fallback SQL for novel requests', () => {
-  const preview = generateLocalSQL('inspect usage events carefully', schema, samples);
-  assert.equal(preview.sql, 'SELECT *\nFROM "usage_events"\nLIMIT 100;');
-  assert.equal(preview.match, 'schema-fallback');
-
-  const count = generateLocalSQL('how many usage events exist?', schema, samples);
-  assert.equal(count.sql, 'SELECT COUNT(*) AS "row_count"\nFROM "usage_events";');
-});
+const schema={id:'test',name:'Test',description:'Test',category:'saas',difficulty:'beginner',icon:'T',ddl:'',sampleData:{},relationships:[],tables:[{name:'organizations',columns:[{name:'org_id',type:'INTEGER'},{name:'name',type:'TEXT'}]},{name:'usage_events',columns:[{name:'event_id',type:'INTEGER'}]}]} satisfies SchemaTemplate;
+const samples=[{id:'test-1',schemaId:'test',category:'basic',difficulty:'beginner',naturalLanguage:'Show all organizations',sql:'SELECT * FROM organizations;',description:'List organizations',explanation:'List all',tags:['organizations']}] satisfies SampleQuery[];
+test('distinguishes a supported reviewed intent',()=>{const result=generateLocalSQL('Show all organizations',schema,samples);assert.equal(result.kind,'supported');if(result.kind==='supported')assert.equal(result.sql,samples[0].sql)});
+test('labels fallback as exploration rather than an answer',()=>{const result=generateLocalSQL('inspect usage events carefully',schema,samples);assert.equal(result.kind,'exploration');if(result.kind==='exploration'){assert.equal(result.label,'Explore available data');assert.match(result.sql,/usage_events/)}});
+test('does not discard unsupported constraints or negation',()=>{assert.equal(generateLocalSQL('Show all organizations but not enterprise',schema,samples).kind,'clarification')});
+test('rejects unsupported profitability instead of substituting sales',()=>{const result=generateLocalSQL('Show product profitability',schema,samples);assert.equal(result.kind,'unsupported');if(result.kind==='unsupported')assert.match(result.missing.join(' '),/cost/i)});
+test('handles empty schemas and empty questions',()=>{assert.equal(generateLocalSQL('',schema,samples).kind,'unsupported');assert.equal(generateLocalSQL('anything',{...schema,tables:[]},samples).kind,'unsupported')});
+test('best customers requires and preserves a bounded definition',()=>{const ecommerce={...schema,id:'ecommerce'};const first=generateLocalSQL('Who are our best customers?',ecommerce,samples);assert.equal(first.kind,'clarification');const resolved=resolveBestCustomers('observed-value');assert.equal(resolved.kind,'supported');if(resolved.kind==='supported'){assert.match(resolved.sql,/status = 'delivered'/);assert.match(resolved.sql,/2024-06-01/);assert.match(resolved.explanation,/Observed completed-order value/)}});

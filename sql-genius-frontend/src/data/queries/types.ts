@@ -15,4 +15,20 @@ export interface SampleQuery {
   description: string;
   explanation: string;
   tags: string[];
+  contract?: MetricContract;
+}
+
+export interface MetricContract {
+  metricId: string;
+  version: string;
+  supportedDecision: string;
+  inputGrain: string;
+  outputGrain: string;
+  sources: string[];
+  formula: string;
+  unit: string;
+  population: string;
+  analysisDate?: string;
+  limitations: string[];
+  evidenceChecks: string[];
 }

@@ -121,15 +121,15 @@ ORDER BY avg_rating DESC;`,
     schemaId: 'ecommerce',
     category: 'intermediate',
     difficulty: 'intermediate',
-    naturalLanguage: 'Find orders with more than 2 items',
-    sql: `SELECT o.order_id, o.customer_id, COUNT(oi.order_item_id) AS item_count, o.total_amount
+    naturalLanguage: 'Find orders with more than 2 physical units',
+    sql: `SELECT o.order_id, o.customer_id, COUNT(oi.order_item_id) AS line_count, SUM(oi.quantity) AS unit_count, o.total_amount
 FROM orders o
 JOIN order_items oi ON o.order_id = oi.order_id
 GROUP BY o.order_id, o.customer_id, o.total_amount
-HAVING COUNT(oi.order_item_id) > 2;`,
-    description: 'Filter orders by number of items using HAVING',
-    explanation: 'GROUP BY with HAVING clause filters aggregated results (unlike WHERE which filters rows)',
-    tags: ['having', 'group by', 'count', 'orders'],
+HAVING SUM(oi.quantity) > 2;`,
+    description: 'Filter orders by physical unit count',
+    explanation: 'SUM(quantity) counts physical units; COUNT(order_item_id) separately reports product lines.',
+    tags: ['having', 'group by', 'units', 'order lines'],
   },
 
   // Advanced Queries
@@ -138,20 +138,30 @@ HAVING COUNT(oi.order_item_id) > 2;`,
     schemaId: 'ecommerce',
     category: 'advanced',
     difficulty: 'advanced',
-    naturalLanguage: 'Show customer lifetime value with order details',
+    naturalLanguage: 'Show observed order value by customer over the fixture period',
     sql: `SELECT c.customer_id, c.first_name, c.last_name,
        COUNT(o.order_id) AS total_orders,
-       SUM(o.total_amount) AS lifetime_value,
+       SUM(o.total_amount) AS observed_order_value,
        ROUND(AVG(o.total_amount), 2) AS avg_order_value,
        MIN(o.order_date) AS first_order,
        MAX(o.order_date) AS last_order
 FROM customers c
 LEFT JOIN orders o ON c.customer_id = o.customer_id
 GROUP BY c.customer_id, c.first_name, c.last_name
-ORDER BY lifetime_value DESC;`,
-    description: 'Comprehensive customer value analysis',
-    explanation: 'Multiple aggregations (COUNT, SUM, AVG, MIN, MAX) to analyze customer behavior',
+ORDER BY observed_order_value DESC;`,
+    description: 'Observed order value over fixture coverage',
+    explanation: 'Aggregates order headers in the fixture; this is neither predicted lifetime value nor the customers.total_spent snapshot.',
     tags: ['aggregation', 'customer analytics', 'multiple functions'],
+    contract: {
+      metricId: 'observed-order-value', version: '1.0.0',
+      supportedDecision: 'Prioritize customer records for review under observed fixture value.',
+      inputGrain: 'One order header', outputGrain: 'One customer', sources: ['customers', 'orders'],
+      formula: 'SUM(orders.total_amount)', unit: 'currency amount',
+      population: 'All order statuses in the 2024-06-01 through 2024-06-15 fixture',
+      analysisDate: '2024-06-15',
+      limitations: ['Not predicted lifetime value', 'Does not use the separate customers.total_spent snapshot'],
+      evidenceChecks: ['Order IDs are unique', 'Each order references one customer', 'Order totals are aggregated before any child-row join'],
+    },
   },
   {
     id: 'ecom-012',
@@ -190,9 +200,10 @@ ORDER BY month DESC;`,
     schemaId: 'ecommerce',
     category: 'business_intelligence',
     difficulty: 'advanced',
-    naturalLanguage: 'Calculate product profitability and rank',
+    naturalLanguage: 'Rank products by gross line-item sales amount',
     sql: `SELECT p.product_id, p.name, p.category,
-       COUNT(oi.order_item_id) AS units_sold,
+       COUNT(oi.order_item_id) AS order_line_count,
+       COALESCE(SUM(oi.quantity), 0) AS units_sold,
        SUM(oi.quantity * oi.unit_price) AS total_revenue,
        ROUND(SUM(oi.quantity * oi.unit_price) / COUNT(DISTINCT oi.order_id), 2) AS revenue_per_order,
        RANK() OVER (PARTITION BY p.category ORDER BY SUM(oi.quantity * oi.unit_price) DESC) AS category_rank
@@ -200,9 +211,9 @@ FROM products p
 LEFT JOIN order_items oi ON p.product_id = oi.product_id
 GROUP BY p.product_id, p.name, p.category
 ORDER BY total_revenue DESC;`,
-    description: 'Product performance with category ranking',
-    explanation: 'Window function RANK() OVER with PARTITION BY for category-specific rankings',
-    tags: ['window functions', 'rank', 'revenue analysis'],
+    description: 'Product sales amount and unit performance with category ranking',
+    explanation: 'Ranks gross line-item sales amount. Profit cannot be calculated because no cost data exists; units use SUM(quantity), not line count.',
+    tags: ['window functions', 'rank', 'sales amount', 'units'],
   },
   {
     id: 'ecom-015',
