@@ -18,8 +18,8 @@ export default function Home() {
   const features = [
     {
       icon: <Sparkles className="w-6 h-6" />,
-      title: "LLM Integration",
-      description: "Optional provider generation with explicit model and request provenance"
+      title: "Reviewed local matching",
+      description: "Browser-local intent matching separates supported, ambiguous, unsupported, and exploratory requests"
     },
     {
       icon: <Shield className="w-6 h-6" />,
@@ -29,12 +29,12 @@ export default function Home() {
     {
       icon: <Database className="w-6 h-6" />,
       title: "Schema Context",
-      description: "Selected tables, columns, types, and relationships are sent as bounded context"
+      description: "Table grains, columns, keys, and relationship cardinality remain inspectable"
     },
     {
       icon: <Code className="w-6 h-6" />,
-      title: "Type-Safe APIs",
-      description: "End-to-end TypeScript with FastAPI + Pydantic"
+      title: "Typed workflow states",
+      description: "TypeScript keeps clarification, supported answers, and exploration distinct"
     },
     {
       icon: <Zap className="w-6 h-6" />,
@@ -43,8 +43,8 @@ export default function Home() {
     },
     {
       icon: <Globe className="w-6 h-6" />,
-      title: "Modern Deployment",
-      description: "Maintained deployment templates with documented verification steps"
+      title: "Documented boundaries",
+      description: "Synthetic fixtures and browser policy are scoped honestly; the provider backend is optional"
     }
   ];
 
@@ -70,7 +70,7 @@ export default function Home() {
                 Demo
               </Link>
               <Link href="/metrics" className="text-white hover:text-blue-400 transition">
-                API Docs
+                Metric workflow
               </Link>
               <Link
                 href="/demo"
@@ -94,13 +94,13 @@ export default function Home() {
         >
           <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-500/20 border border-blue-500/30 rounded-full">
             <Sparkles className="w-4 h-4 text-blue-400" />
-            <span className="text-sm text-blue-300">Portfolio Demo Project</span>
+            <span className="text-sm text-blue-300">SQL Analytics and Decision-Support Playground</span>
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
-            Transform Natural Language
+            Ask a clearer question.
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-              Into SQL Queries
+              Inspect the SQL. Understand the result.
             </span>
           </h1>
           
@@ -148,10 +148,10 @@ export default function Home() {
           className="text-center mb-12"
         >
           <h2 className="text-3xl font-bold text-white mb-4">
-            AI Engineering Skills Demonstrated
+            Product workflow and boundaries
           </h2>
           <p className="text-gray-300 mb-12 max-w-2xl mx-auto">
-            This portfolio project demonstrates applied AI and analytics engineering patterns
+            Explore synthetic datasets with reviewed query templates, local SQLite execution, and visible validation
           </p>
         </motion.div>
         
@@ -288,8 +288,8 @@ export default function Home() {
               <Link href="/demo" className="text-gray-400 hover:text-white transition">
                 Demo
               </Link>
-              <Link href="https://sql-genius-api.onrender.com/docs" className="text-gray-400 hover:text-white transition">
-                API Docs
+              <Link href="/metrics" className="text-gray-400 hover:text-white transition">
+                Metric workflow
               </Link>
               <Link href="https://github.com/cbratkovics/sql-genius-ai" className="text-gray-400 hover:text-white transition">
                 GitHub

@@ -1,6 +1,6 @@
 # SQL Genius AI
 
-**Natural-Language SQL and Analytics Playground**
+**SQL Analytics and Decision-Support Playground**
 
 SQL Genius AI demonstrates an inspectable analytics workflow: select and inspect a deterministic sample schema, express a question or choose a curated example, review/edit SQL, explicitly run an accepted read-only query in browser SQLite, and inspect/export the preview. Generation now runs entirely in the browser with no account, API key, backend, or per-request cost.
 
@@ -18,8 +18,8 @@ SQL Genius AI demonstrates an inspectable analytics workflow: select and inspect
 ## Flow and provenance
 
 1. The selected fixture defines the exact tables, columns, types, and relationships.
-2. Choosing a **Curated example** loads reviewed fixture SQL. Choosing **Generate** matches the question against the selected schema's reviewed query library in the browser. Novel requests receive a conservative table preview or row-count query rather than invented joins or business logic.
-3. The UI explains whether it selected a reviewed intent or used the conservative fallback, shows match confidence and assumptions, and makes no network generation request.
+2. Choosing a **Curated example** loads reviewed fixture SQL. Choosing **Generate** matches the question against the selected schema's reviewed query library in the browser. Novel requests may receive an explicitly labeled exploratory preview; it is never represented as an answer. Ambiguous and unsupported requests do not receive answer SQL.
+3. The UI explains whether it selected a reviewed intent or used the conservative fallback, shows the request state and assumptions, and makes no network generation request.
 4. Generation and Run are separate. At Run, the browser policy accepts one `SELECT` or read-only CTE and rejects mutation/schema/policy commands before SQLite preparation.
 5. SQLite executes against synthetic fixture rows. Results are a preview capped at 500 rows and 1 MB. The UI attaches the source, dataset, execution state, and truncation state to the displayed SQL.
 
@@ -27,7 +27,7 @@ Passing the policy is not a correctness evaluation or a general security sandbox
 
 ## No-key quick start
 
-Requirements: Node.js 18+ and npm.
+Requirements: Node.js 22+ and npm. Node 22 provides the type-stripping test runner used by the checked-in scripts and CI.
 
 ```bash
 cd sql-genius-frontend
@@ -67,10 +67,10 @@ A successful response identifies `source`, actual `provider`/`model`, schema and
 
 ```bash
 pytest -q backend/test_demo_contract.py
-cd sql-genius-frontend && npm run lint && npm run build
+cd sql-genius-frontend && npm test && npm run lint && npm run typecheck && npm run build
 ```
 
-These checks cover contracts and deterministic implementation behavior. The local generator intentionally favors predictable, reviewed SQL over pretending to understand ambiguous business questions. See [`docs/PORTFOLIO_EVIDENCE.md`](docs/PORTFOLIO_EVIDENCE.md) for evidence categories, limitations, and external follow-up copy.
+These checks cover contracts and deterministic implementation behavior. The local generator intentionally favors predictable, reviewed SQL over pretending to understand ambiguous business questions. See [`docs/PORTFOLIO_EVIDENCE.md`](docs/PORTFOLIO_EVIDENCE.md) for architecture, validation, and limitations.
 
 ## Repository map
 

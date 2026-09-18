@@ -19,12 +19,14 @@ export interface Column {
 export interface Table {
   name: string;
   columns: Column[];
+  grain?: string;
+  timeCoverage?: string;
 }
 
 export interface Relationship {
   from: { table: string; column: string };
   to: { table: string; column: string };
-  type: 'one-to-one' | 'one-to-many' | 'many-to-many';
+  type: 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many';
 }
 
 export interface SchemaTemplate {
@@ -38,4 +40,6 @@ export interface SchemaTemplate {
   relationships: Relationship[];
   ddl: string;
   icon: string;
+  version?: string;
+  provenance?: string;
 }

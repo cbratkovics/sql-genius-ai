@@ -10,7 +10,8 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "prepare:sql-wasm": "node scripts/prepare-sql-wasm.mjs",
     "predev": "npm run prepare:sql-wasm",
-    "prebuild": "npm run prepare:sql-wasm"
+    "prebuild": "npm run prepare:sql-wasm",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -42,5 +43,8 @@
     "eslint-config-next": "15.5.2",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

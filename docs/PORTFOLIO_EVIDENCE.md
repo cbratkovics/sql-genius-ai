@@ -1,32 +1,34 @@
-# Portfolio evidence and external alignment
+# Architecture and validation
 
-## Evidence categories
+## Supported workflow
 
-- **Inspected:** the mounted FastAPI routers, browser database, schema/query fixtures, provider wrapper, optional services, CI, environment examples, and deployment templates.
-- **Executed:** frontend lint/type/build checks and focused policy/CSV tests. The curated workflow uses real browser SQLite on synthetic data; its page and WASM asset were HTTP-smoke-checked, but interactive execution was not browser-automated in this environment.
-- **Evaluated:** contract cases cover missing credentials, malformed/fenced output, real schema context, zero token usage, and disabled remote execution. Policy implementation covers a single read-only statement, comments/literals, mutation and SQLite policy commands, and bounded previews. This is not an LLM accuracy score.
-- **Unverified:** a live Anthropic request, browser interaction/worker cancellation, candidate hosted URLs, external database services, Redis/Celery operation, billing/email, and production controls.
-- **Intentionally disabled:** remote demo SQL execution and fabricated aggregate metrics. The compatibility execution route returns no illustrative rows and `execution_status=not_run`.
+SQL Genius AI is a SQL analytics and decision-support playground for bundled synthetic data. The maintained browser path loads a versioned fixture, matches questions to reviewed templates, asks for clarification when a definition changes the answer, exposes exact SQL for review, and executes only after the user chooses **Execute**. Unsupported questions and exploratory previews are labeled separately.
 
-The sample rows are synthetic. A successful local result is observed SQLite execution on those rows, not a precomputed provider result. Provider output remains `not_run` until the user explicitly runs the exact displayed SQL.
+The flagship e-commerce question, “Who are our best customers?”, requires a choice between observed completed-order value and completed-order frequency. Both definitions use delivered order headers from 2024-06-01 through 2024-06-15. The SQL aggregates headers before ranking, so a join to multiple order-item rows cannot multiply an order total.
 
-## Operational limits
+## Data and metric boundaries
 
-The browser policy is a narrow product guard, not authorization for arbitrary databases. It rejects multiple statements and mutation/schema/attachment/extension/pragma commands, then relies on SQLite preparation for syntax/name errors. Preview collection is capped at 500 rows and 1 MB. sql.js executes synchronously on the browser main thread, so a hard CPU deadline/termination boundary was not established; trusted finite fixture databases and the query-length bound limit the maintained demo scope.
+Tables expose their row grain, fixture coverage, keys, child-to-parent relationship cardinality, version, and synthetic provenance. `customers.total_spent` is a separate snapshot whose coverage is not asserted to equal the included order headers. Order line count, physical units (`SUM(quantity)`), distinct products, and order-header value are separate measures. Gross line-item sales are not profit because the fixture has no product costs.
 
-The optional rate limiter is per-process and not shared across replicas. Authentication, tenants, caching, queues, payments, backup, and observability implementations were preserved but were not promoted as active services.
+The SaaS activity examples use the explicit analysis date 2024-07-01. The inactivity classification is a deterministic illustration, not a churn model; missing activity is a separate state. Unique feature users are a count, not an adoption rate, and current subscription status is a snapshot rather than a conversion funnel.
 
-## Reproducibility record
+## Execution and validation
 
-Record the source commit/dirty state with `git rev-parse HEAD` and `git status --short`, then run the commands in the root README. Provider-client tests use a stub and make no paid request; they were authored but could not run in this environment because backend dependencies were unavailable. Test names are the case identifiers and assertions define comparison rules. No `latest` live-model evaluation artifact is published because none was run.
+The read-only policy accepts one SELECT or read-only CTE before SQLite prepares the statement. This is a narrow product control, not a security sandbox. Preview collection is capped at 500 rows and 1,000,000 UTF-8 bytes. CSV export uses the executed result snapshot and escapes spreadsheet formulas. Schema loading builds a new database before exposing it and clears readiness after a failed load.
 
-## External follow-up (not performed)
+Run:
 
-**Proposed GitHub About (under 350 characters):** SQL Genius AI — a natural-language SQL and analytics playground for inspecting schema-aware SQL and running reviewed, read-only queries locally against deterministic SQLite sample data. Optional provider generation; explicit provenance and limitations.
+```bash
+cd sql-genius-frontend
+npm ci
+npm test
+npm run lint
+npx tsc --noEmit
+npm run build
+```
 
-**Résumé/site bullets:**
+Tests independently check line count versus units, parent/child fan-out, relationship metadata, question-state behavior, SQL policy and CSV handling, and execute every e-commerce curated query against the fixture.
 
-- Built a schema-aware natural-language SQL playground that separates generation from execution and runs reviewed read-only queries locally against deterministic SQLite fixtures.
-- Added typed generation/execution provenance, bounded result previews, CSV-safe export, and stubbed provider contract tests without claiming unmeasured model accuracy.
+## Limitations
 
-Repository topics/About, résumé, site, and hosted deployments were not changed. Verify ownership, environment configuration, `/health`, no-key sample execution, provider failure behavior, mobile layout, and asset loading before publishing a canonical URL.
+The fixtures are small and synthetic. A successful query is not evidence of production accuracy or business impact. Browser SQL runs synchronously on the main thread with no hard CPU cancellation. A bounded preview is not a complete population export. Arbitrary edited SQL has no guided business conclusion. The optional provider-backed FastAPI route is separate from the no-key browser workflow and is not evidence that a provider or hosted deployment is active.

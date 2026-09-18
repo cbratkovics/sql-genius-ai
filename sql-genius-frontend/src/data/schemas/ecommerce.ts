@@ -7,10 +7,13 @@ export const ecommerceSchema: SchemaTemplate = {
   category: 'ecommerce',
   difficulty: 'intermediate',
   icon: '🛒',
+  version: '2024-06-v1',
+  provenance: 'Bundled synthetic fixture; not customer or production data.',
 
   tables: [
     {
       name: 'customers',
+      grain: 'One row per synthetic customer; total_spent is a separate fixture snapshot and is not reconciled to the orders sample.',
       columns: [
         { name: 'customer_id', type: 'INTEGER', primaryKey: true },
         { name: 'email', type: 'TEXT' },
@@ -22,6 +25,7 @@ export const ecommerceSchema: SchemaTemplate = {
     },
     {
       name: 'products',
+      grain: 'One row per catalog product.',
       columns: [
         { name: 'product_id', type: 'INTEGER', primaryKey: true },
         { name: 'name', type: 'TEXT' },
@@ -33,6 +37,8 @@ export const ecommerceSchema: SchemaTemplate = {
     },
     {
       name: 'orders',
+      grain: 'One row per order header.',
+      timeCoverage: '2024-06-01 through 2024-06-15',
       columns: [
         { name: 'order_id', type: 'INTEGER', primaryKey: true },
         { name: 'customer_id', type: 'INTEGER', foreignKey: { table: 'customers', column: 'customer_id' } },
@@ -43,6 +49,7 @@ export const ecommerceSchema: SchemaTemplate = {
     },
     {
       name: 'order_items',
+      grain: 'One row per product line on an order; quantity is physical units.',
       columns: [
         { name: 'order_item_id', type: 'INTEGER', primaryKey: true },
         { name: 'order_id', type: 'INTEGER', foreignKey: { table: 'orders', column: 'order_id' } },
@@ -120,11 +127,11 @@ export const ecommerceSchema: SchemaTemplate = {
   },
 
   relationships: [
-    { from: { table: 'orders', column: 'customer_id' }, to: { table: 'customers', column: 'customer_id' }, type: 'many-to-many' },
-    { from: { table: 'order_items', column: 'order_id' }, to: { table: 'orders', column: 'order_id' }, type: 'many-to-many' },
-    { from: { table: 'order_items', column: 'product_id' }, to: { table: 'products', column: 'product_id' }, type: 'many-to-many' },
-    { from: { table: 'reviews', column: 'product_id' }, to: { table: 'products', column: 'product_id' }, type: 'many-to-many' },
-    { from: { table: 'reviews', column: 'customer_id' }, to: { table: 'customers', column: 'customer_id' }, type: 'many-to-many' },
+    { from: { table: 'orders', column: 'customer_id' }, to: { table: 'customers', column: 'customer_id' }, type: 'many-to-one' },
+    { from: { table: 'order_items', column: 'order_id' }, to: { table: 'orders', column: 'order_id' }, type: 'many-to-one' },
+    { from: { table: 'order_items', column: 'product_id' }, to: { table: 'products', column: 'product_id' }, type: 'many-to-one' },
+    { from: { table: 'reviews', column: 'product_id' }, to: { table: 'products', column: 'product_id' }, type: 'many-to-one' },
+    { from: { table: 'reviews', column: 'customer_id' }, to: { table: 'customers', column: 'customer_id' }, type: 'many-to-one' },
   ],
 
   ddl: `
