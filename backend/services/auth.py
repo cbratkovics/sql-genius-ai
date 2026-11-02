@@ -1,43 +1,44 @@
-from typing import Optional
-from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import UTC, datetime
+
 from fastapi import HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.core.security import (
-    verify_password, 
-    get_password_hash, 
-    create_access_token, 
+    create_access_token,
     create_refresh_token,
-    generate_password_reset_token,
-    verify_password_reset_token,
     generate_email_verification_token,
-    verify_email_verification_token
+    generate_password_reset_token,
+    get_password_hash,
+    verify_email_verification_token,
+    verify_password,
+    verify_password_reset_token,
 )
 from backend.models.user import User
-from backend.services.user import user_service
-from backend.services.tenant import tenant_service
 from backend.services.email import email_service
+from backend.services.tenant import tenant_service
+from backend.services.user import user_service
 
 
 class AuthService:
     async def authenticate_user(
-        self, 
-        db: AsyncSession, 
-        email: str, 
+        self,
+        db: AsyncSession,
+        email: str,
         password: str
-    ) -> Optional[User]:
+    ) -> User | None:
         user = await user_service.get_by_email(db, email)
         if not user:
             return None
         if not verify_password(password, user.hashed_password):
             return None
         return user
-    
+
     async def login(
-        self, 
-        db: AsyncSession, 
-        email: str, 
+        self,
+        db: AsyncSession,
+        email: str,
         password: str,
-        ip_address: Optional[str] = None
+        ip_address: str | None = None
     ) -> dict:
         user = await self.authenticate_user(db, email, password)
         if not user:
@@ -45,28 +46,28 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password"
             )
-        
+
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Inactive user"
             )
-        
+
         if not user.is_verified:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Please verify your email first"
             )
-        
+
         # Update last login
-        user.last_login_at = datetime.utcnow()
+        user.last_login_at = datetime.now(UTC)
         user.last_login_ip = ip_address
         user.failed_login_attempts = 0
         await db.commit()
-        
+
         access_token = create_access_token(subject=user.id)
         refresh_token = create_refresh_token(subject=user.id)
-        
+
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -79,14 +80,14 @@ class AuthService:
                 "tenant_id": user.tenant_id
             }
         }
-    
+
     async def register(
-        self, 
+        self,
         db: AsyncSession,
         email: str,
         password: str,
         full_name: str,
-        company_name: Optional[str] = None
+        company_name: str | None = None
     ) -> dict:
         # Check if user already exists
         existing_user = await user_service.get_by_email(db, email)
@@ -95,7 +96,9 @@ class AuthService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
             )
-        
+
+        # Validate/hash before creating any tenant state.
+        hashed_password = get_password_hash(password)
         # Create tenant first
         tenant_data = {
             "name": company_name or f"{full_name}'s Workspace",
@@ -104,32 +107,32 @@ class AuthService:
             "company_name": company_name
         }
         tenant = await tenant_service.create(db, tenant_data)
-        
+
         # Create user
         user_data = {
             "email": email,
             "username": email.split("@")[0],
             "full_name": full_name,
-            "hashed_password": get_password_hash(password),
+            "hashed_password": hashed_password,
             "tenant_id": tenant.id,
             "role": "tenant_admin"
         }
         user = await user_service.create(db, user_data)
-        
+
         # Send verification email
         verification_token = generate_email_verification_token(email)
         await email_service.send_verification_email(
-            email, 
-            full_name, 
+            email,
+            full_name,
             verification_token
         )
-        
+
         return {
             "message": "Registration successful. Please check your email to verify your account.",
             "user_id": user.id,
             "tenant_id": tenant.id
         }
-    
+
     async def verify_email(self, db: AsyncSession, token: str) -> dict:
         email = verify_email_verification_token(token)
         if not email:
@@ -137,47 +140,47 @@ class AuthService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid or expired verification token"
             )
-        
+
         user = await user_service.get_by_email(db, email)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
-        
+
         if user.is_verified:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already verified"
             )
-        
+
         user.is_verified = True
         await db.commit()
-        
+
         return {"message": "Email verified successfully"}
-    
+
     async def request_password_reset(
-        self, 
-        db: AsyncSession, 
+        self,
+        db: AsyncSession,
         email: str
     ) -> dict:
         user = await user_service.get_by_email(db, email)
         if not user:
             return {"message": "If the email exists, a reset link has been sent"}
-        
+
         reset_token = generate_password_reset_token(email)
         await email_service.send_password_reset_email(
-            email, 
-            user.full_name, 
+            email,
+            user.full_name or user.username,
             reset_token
         )
-        
+
         return {"message": "If the email exists, a reset link has been sent"}
-    
+
     async def reset_password(
-        self, 
-        db: AsyncSession, 
-        token: str, 
+        self,
+        db: AsyncSession,
+        token: str,
         new_password: str
     ) -> dict:
         email = verify_password_reset_token(token)
@@ -186,54 +189,55 @@ class AuthService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid or expired reset token"
             )
-        
+
         user = await user_service.get_by_email(db, email)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
-        
+
         user.hashed_password = get_password_hash(new_password)
         await db.commit()
-        
+
         return {"message": "Password reset successfully"}
-    
+
     async def refresh_token(self, db: AsyncSession, refresh_token: str) -> dict:
         try:
-            from jose import jwt
+            from jose import JWTError, jwt
+
             from backend.core.config import settings
-            
+
             payload = jwt.decode(
-                refresh_token, 
-                settings.SECRET_KEY, 
+                refresh_token,
+                settings.SECRET_KEY,
                 algorithms=[settings.ALGORITHM]
             )
             user_id = payload.get("sub")
             token_type = payload.get("type")
-            
-            if token_type != "refresh":
+
+            if token_type != "refresh" or not isinstance(user_id, str):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid token type"
                 )
-                
-        except jwt.JWTError:
+
+        except JWTError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid refresh token"
             )
-        
+
         user = await user_service.get_by_id(db, user_id)
         if not user or not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found or inactive"
             )
-        
+
         access_token = create_access_token(subject=user.id)
         new_refresh_token = create_refresh_token(subject=user.id)
-        
+
         return {
             "access_token": access_token,
             "refresh_token": new_refresh_token,

@@ -1,0 +1,15 @@
+.git
+**/__pycache__
+**/.mypy_cache
+**/.pytest_cache
+**/.ruff_cache
+**/.venv
+**/node_modules
+**/.next
+**/out
+**/test-results
+**/playwright-report
+**/.env
+**/.env.local
+**/*.db
+**/*.sqlite3

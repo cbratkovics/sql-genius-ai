@@ -1,16 +1,17 @@
 import asyncio
-import jwt
-from typing import Dict, Optional, List
-from datetime import datetime, timedelta
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.backends import default_backend
-import redis.asyncio as redis
 import json
 import logging
-from dataclasses import dataclass
-from enum import Enum
 import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from enum import Enum
+
+import jwt
+import redis.asyncio as redis
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+
 from backend.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -27,17 +28,17 @@ class TokenType(str, Enum):
 class JWTClaims:
     sub: str  # Subject (user ID)
     iss: str  # Issuer
-    aud: List[str]  # Audience
+    aud: list[str]  # Audience
     exp: int  # Expiration time
     iat: int  # Issued at
     nbf: int  # Not before
     jti: str  # JWT ID
     token_type: TokenType
-    scope: List[str]  # Permissions/scopes
-    tenant_id: Optional[str] = None
-    session_id: Optional[str] = None
-    device_id: Optional[str] = None
-    ip_address: Optional[str] = None
+    scope: list[str]  # Permissions/scopes
+    tenant_id: str | None = None
+    session_id: str | None = None
+    device_id: str | None = None
+    ip_address: str | None = None
 
 
 class JWTKeyManager:
@@ -91,7 +92,7 @@ class JWTKeyManager:
             "key_id": key_id,
             "private_key": private_pem,
             "public_key": public_pem,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).replace(tzinfo=None).isoformat(),
             "algorithm": self.algorithm
         }
         
@@ -113,35 +114,35 @@ class JWTKeyManager:
         await self.redis_client.setex(
             "jwt:last_rotation",
             self.key_retention_period,
-            datetime.utcnow().isoformat()
+            datetime.now(UTC).replace(tzinfo=None).isoformat()
         )
         
         logger.info(f"Generated new RSA key pair with ID: {key_id}")
         return key_id
     
-    async def _get_current_key(self) -> Optional[Dict]:
+    async def _get_current_key(self) -> dict | None:
         """Get current signing key"""
         try:
             key_data = await self.redis_client.get("jwt:current_key")
             if key_data:
                 return json.loads(key_data)
             return None
-        except Exception as e:
-            logger.error(f"Failed to get current key: {e}")
+        except Exception:
+            logger.exception("Failed to get current key")
             return None
     
-    async def get_public_key(self, key_id: str) -> Optional[str]:
+    async def get_public_key(self, key_id: str) -> str | None:
         """Get public key by key ID for verification"""
         try:
             key_data = await self.redis_client.get(f"jwt:key:{key_id}")
             if key_data:
                 return json.loads(key_data)["public_key"]
             return None
-        except Exception as e:
-            logger.error(f"Failed to get public key {key_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to get public key {key_id}")
             return None
     
-    async def get_jwks(self) -> Dict:
+    async def get_jwks(self) -> dict:
         """Get JSON Web Key Set for public consumption"""
         try:
             # Get all active keys
@@ -158,6 +159,8 @@ class JWTKeyManager:
                         backend=default_backend()
                     )
                     
+                    if not isinstance(public_key, rsa.RSAPublicKey):
+                        raise TypeError("JWT signing key is not an RSA public key")
                     public_numbers = public_key.public_numbers()
                     
                     jwk = {
@@ -172,8 +175,8 @@ class JWTKeyManager:
             
             return {"keys": keys}
             
-        except Exception as e:
-            logger.error(f"Failed to generate JWKS: {e}")
+        except Exception:
+            logger.exception("Failed to generate JWKS")
             return {"keys": []}
     
     def _int_to_base64url(self, value: int) -> str:
@@ -192,12 +195,12 @@ class JWTKeyManager:
                 last_rotation = await self.redis_client.get("jwt:last_rotation")
                 if last_rotation:
                     last_rotation_time = datetime.fromisoformat(last_rotation)
-                    if datetime.utcnow() - last_rotation_time > timedelta(seconds=self.key_rotation_interval):
+                    if datetime.now(UTC).replace(tzinfo=None) - last_rotation_time > timedelta(seconds=self.key_rotation_interval):
                         await self._generate_new_key_pair()
                         logger.info("Automatic key rotation completed")
                 
-            except Exception as e:
-                logger.error(f"Key rotation scheduler error: {e}")
+            except Exception:
+                logger.exception("Key rotation scheduler error")
                 await asyncio.sleep(300)  # Wait 5 minutes on error
 
 
@@ -220,20 +223,20 @@ class UnifiedAuthService:
         self,
         user_id: str,
         tenant_id: str,
-        scopes: List[str],
-        audience: List[str] = None,
-        device_id: str = None,
-        ip_address: str = None
-    ) -> Dict[str, str]:
+        scopes: list[str],
+        audience: list[str] | None = None,
+        device_id: str | None = None,
+        ip_address: str | None = None
+    ) -> dict[str, str | int]:
         """Create access and refresh tokens"""
         
         session_id = str(uuid.uuid4())
         current_key = await self.key_manager._get_current_key()
         
         if not current_key:
-            raise Exception("No signing key available")
+            raise RuntimeError("No signing key available")
         
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         
         # Create access token claims
         access_claims = JWTClaims(
@@ -287,7 +290,7 @@ class UnifiedAuthService:
             "session_id": session_id
         }
     
-    async def _sign_token(self, claims: JWTClaims, key_data: Dict) -> str:
+    async def _sign_token(self, claims: JWTClaims, key_data: dict) -> str:
         """Sign JWT token with RSA private key"""
         headers = {
             "alg": key_data["algorithm"],
@@ -325,6 +328,8 @@ class UnifiedAuthService:
             backend=default_backend()
         )
         
+        if not isinstance(private_key, rsa.RSAPrivateKey):
+            raise TypeError("JWT signing key is not an RSA private key")
         # Sign token
         return jwt.encode(
             payload,
@@ -333,7 +338,7 @@ class UnifiedAuthService:
             headers=headers
         )
     
-    async def verify_token(self, token: str) -> Optional[Dict]:
+    async def verify_token(self, token: str) -> dict | None:
         """Verify and decode JWT token"""
         try:
             # Decode header to get key ID
@@ -356,6 +361,8 @@ class UnifiedAuthService:
                 backend=default_backend()
             )
             
+            if not isinstance(public_key, rsa.RSAPublicKey):
+                raise TypeError("JWT verification key is not an RSA public key")
             # Verify and decode token
             payload = jwt.decode(
                 token,
@@ -381,24 +388,24 @@ class UnifiedAuthService:
         except jwt.InvalidTokenError as e:
             logger.warning(f"Invalid token: {e}")
             return None
-        except Exception as e:
-            logger.error(f"Token verification error: {e}")
+        except Exception:
+            logger.exception("Token verification error")
             return None
     
     async def _store_session(
         self,
         session_id: str,
         user_id: str,
-        device_id: str = None,
-        ip_address: str = None
+        device_id: str | None = None,
+        ip_address: str | None = None
     ):
         """Store session information in Redis"""
         session_data = {
             "user_id": user_id,
             "device_id": device_id,
             "ip_address": ip_address,
-            "created_at": datetime.utcnow().isoformat(),
-            "last_activity": datetime.utcnow().isoformat()
+            "created_at": datetime.now(UTC).replace(tzinfo=None).isoformat(),
+            "last_activity": datetime.now(UTC).replace(tzinfo=None).isoformat()
         }
         
         # Store session
@@ -418,6 +425,7 @@ class UnifiedAuthService:
             session_data = await self.redis_client.get(f"session:{session_id}")
             return session_data is not None
         except Exception:
+            logger.exception("Failed to read authentication session")
             return False
     
     async def _enforce_session_limits(self, user_id: str):
@@ -441,8 +449,8 @@ class UnifiedAuthService:
                 for session_id, _ in sessions_to_remove:
                     await self.revoke_session(session_id)
                     
-        except Exception as e:
-            logger.error(f"Failed to enforce session limits: {e}")
+        except Exception:
+            logger.exception("Failed to enforce session limits")
     
     async def revoke_session(self, session_id: str):
         """Revoke a specific session"""
@@ -459,8 +467,8 @@ class UnifiedAuthService:
             # Delete session
             await self.redis_client.delete(f"session:{session_id}")
             
-        except Exception as e:
-            logger.error(f"Failed to revoke session {session_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to revoke session {session_id}")
     
     async def revoke_all_user_sessions(self, user_id: str):
         """Revoke all sessions for a user"""
@@ -472,10 +480,10 @@ class UnifiedAuthService:
             
             await self.redis_client.delete(f"user_sessions:{user_id}")
             
-        except Exception as e:
-            logger.error(f"Failed to revoke all sessions for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to revoke all sessions for user {user_id}")
     
-    async def get_jwks_endpoint(self) -> Dict:
+    async def get_jwks_endpoint(self) -> dict:
         """Get JWKS for public key distribution"""
         return await self.key_manager.get_jwks()
 

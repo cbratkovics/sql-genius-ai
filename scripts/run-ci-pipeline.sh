@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # SQL Genius AI - Docker-based CI/CD Pipeline Runner
-# This script runs the complete CI/CD pipeline locally using Docker
+# Optional legacy Docker profiles; required offline CI uses ./scripts/check-backend.sh.
 
 set -e
 

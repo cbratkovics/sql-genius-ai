@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.11-slim
 
 # Set environment variables
@@ -18,10 +19,12 @@ WORKDIR /app
 COPY backend/requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then export PIP_CERT=/run/secrets/proxy_ca; fi; \
+    pip install --no-cache-dir --require-hashes -r requirements.txt
 
 # Copy application code
-COPY backend/ .
+COPY backend/ ./backend/
 
 # Create non-root user
 RUN adduser --disabled-password --gecos '' celeryuser && \
@@ -30,7 +33,7 @@ USER celeryuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD celery -A core.celery_app inspect ping || exit 1
+    CMD celery -A backend.core.celery_app inspect ping || exit 1
 
 # Start Celery worker
-CMD ["celery", "-A", "core.celery_app", "worker", "-l", "info", "-Q", "query_processing,file_processing,analytics", "--concurrency=4"]
+CMD ["celery", "-A", "backend.core.celery_app", "worker", "-l", "info", "-Q", "query_processing,file_processing,analytics", "--concurrency=4"]

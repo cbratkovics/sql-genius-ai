@@ -1,17 +1,33 @@
+from __future__ import annotations
+
 import asyncio
-import boto3
 import json
 import logging
-from datetime import datetime, timedelta, date
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
+from datetime import UTC, date, datetime, timedelta
 from enum import Enum
+from typing import TYPE_CHECKING, Any, TypedDict
+
+import boto3
 import numpy as np
 import redis.asyncio as redis
+
 from backend.core.config import settings
 from backend.observability.metrics import metrics_collector
 
 logger = logging.getLogger(__name__)
+
+
+if TYPE_CHECKING:
+    from mypy_boto3_ce import CostExplorerClient
+    from mypy_boto3_pricing import PricingClient
+
+
+class DailyCostBreakdown(TypedDict):
+    total: float
+    by_service: dict[str, float]
+    by_category: dict[str, float]
+    by_tenant: dict[str, float]
 
 
 class CostCategory(str, Enum):
@@ -40,9 +56,9 @@ class CostItem:
     amount: float
     currency: str
     timestamp: datetime
-    resource_id: str = None
-    tenant_id: str = None
-    tags: Dict[str, str] = field(default_factory=dict)
+    resource_id: str | None = None
+    tenant_id: str | None = None
+    tags: dict[str, str] = field(default_factory=dict)
     usage_quantity: float = 0.0
     usage_unit: str = ""
     region: str = "us-east-1"
@@ -57,8 +73,8 @@ class CostBudget:
     period: str  # "monthly", "quarterly", "yearly"
     allocation_type: CostAllocationType
     allocation_value: str  # tenant_id, service_name, etc.
-    alert_thresholds: List[float] = field(default_factory=lambda: [50.0, 80.0, 100.0])
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    alert_thresholds: list[float] = field(default_factory=lambda: [50.0, 80.0, 100.0])
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
     is_active: bool = True
 
 
@@ -72,8 +88,8 @@ class CostAnomaly:
     deviation_percent: float
     detected_at: datetime
     severity: str  # "low", "medium", "high", "critical"
-    root_cause: Optional[str] = None
-    recommendation: Optional[str] = None
+    root_cause: str | None = None
+    recommendation: str | None = None
 
 
 @dataclass
@@ -86,7 +102,7 @@ class SavingsRecommendation:
     estimated_monthly_savings: float
     implementation_effort: str  # "low", "medium", "high"
     confidence: float  # 0.0 to 1.0
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
     status: str = "pending"  # "pending", "implemented", "dismissed"
 
 
@@ -94,6 +110,8 @@ class FinOpsManager:
     """Enterprise Financial Operations and Cost Management"""
     
     def __init__(self):
+        self.ce_client: CostExplorerClient | None
+        self.pricing_client: PricingClient | None
         self.redis_client = redis.from_url(settings.REDIS_URL)
         
         # AWS clients for cost data
@@ -111,6 +129,7 @@ class FinOpsManager:
                 region_name='us-east-1'
             )
         except Exception as e:
+            logger.exception("Optional integration operation failed")
             logger.warning(f"AWS clients not configured: {e}")
             self.ce_client = None
             self.pricing_client = None
@@ -164,8 +183,8 @@ class FinOpsManager:
         model: str,
         input_tokens: int,
         output_tokens: int,
-        tenant_id: str = None,
-        request_id: str = None
+        tenant_id: str | None = None,
+        request_id: str | None = None
     ) -> float:
         """Track AI API usage and cost"""
         try:
@@ -185,7 +204,7 @@ class FinOpsManager:
                 category=CostCategory.AI_API,
                 amount=total_cost,
                 currency="USD",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC).replace(tzinfo=None),
                 resource_id=request_id,
                 tenant_id=tenant_id,
                 usage_quantity=input_tokens + output_tokens,
@@ -210,8 +229,8 @@ class FinOpsManager:
             logger.debug(f"AI API cost tracked: ${total_cost:.6f} for {provider}/{model}")
             return total_cost
             
-        except Exception as e:
-            logger.error(f"Failed to track AI API cost: {e}")
+        except Exception:
+            logger.exception("Failed to track AI API cost")
             return 0.0
     
     async def track_infrastructure_cost(
@@ -219,9 +238,9 @@ class FinOpsManager:
         service: str,
         category: CostCategory,
         amount: float,
-        resource_id: str = None,
-        tenant_id: str = None,
-        tags: Dict[str, str] = None
+        resource_id: str | None = None,
+        tenant_id: str | None = None,
+        tags: dict[str, str] | None = None
     ):
         """Track infrastructure cost"""
         try:
@@ -230,7 +249,7 @@ class FinOpsManager:
                 category=category,
                 amount=amount,
                 currency="USD",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC).replace(tzinfo=None),
                 resource_id=resource_id,
                 tenant_id=tenant_id,
                 tags=tags or {}
@@ -238,8 +257,8 @@ class FinOpsManager:
             
             await self._store_cost_item(cost_item)
             
-        except Exception as e:
-            logger.error(f"Failed to track infrastructure cost: {e}")
+        except Exception:
+            logger.exception("Failed to track infrastructure cost")
     
     async def _store_cost_item(self, cost_item: CostItem):
         """Store cost item in Redis"""
@@ -269,13 +288,13 @@ class FinOpsManager:
             # Update aggregated cost totals
             await self._update_cost_aggregates(cost_item)
             
-        except Exception as e:
-            logger.error(f"Failed to store cost item: {e}")
+        except Exception:
+            logger.exception("Failed to store cost item")
     
     async def _update_cost_aggregates(self, cost_item: CostItem):
         """Update aggregated cost totals for reporting"""
         try:
-            today = datetime.utcnow().date()
+            today = datetime.now(UTC).replace(tzinfo=None).date()
             month_key = today.strftime("%Y%m")
             
             # Aggregate by service
@@ -299,19 +318,19 @@ class FinOpsManager:
             await self.redis_client.incrbyfloat(daily_key, cost_item.amount)
             await self.redis_client.expire(daily_key, 86400 * 90)
             
-        except Exception as e:
-            logger.error(f"Failed to update cost aggregates: {e}")
+        except Exception:
+            logger.exception("Failed to update cost aggregates")
     
     async def get_cost_report(
         self,
         start_date: date,
         end_date: date,
-        allocation_type: CostAllocationType = None,
-        allocation_value: str = None
-    ) -> Dict[str, Any]:
+        allocation_type: CostAllocationType | None = None,
+        allocation_value: str | None = None
+    ) -> dict[str, Any]:
         """Generate cost report for specified period"""
         try:
-            report = {
+            report: dict[str, Any] = {
                 "period": {
                     "start_date": start_date.isoformat(),
                     "end_date": end_date.isoformat()
@@ -326,7 +345,7 @@ class FinOpsManager:
                 },
                 "top_costs": [],
                 "trends": {},
-                "generated_at": datetime.utcnow().isoformat()
+                "generated_at": datetime.now(UTC).replace(tzinfo=None).isoformat()
             }
             
             # Get cost data for the period
@@ -377,10 +396,10 @@ class FinOpsManager:
             return report
             
         except Exception as e:
-            logger.error(f"Failed to generate cost report: {e}")
+            logger.exception("Failed to generate cost report")
             return {"error": str(e)}
     
-    async def _get_daily_costs(self, target_date: date) -> Dict[str, Any]:
+    async def _get_daily_costs(self, target_date: date) -> DailyCostBreakdown:
         """Get cost breakdown for a specific day"""
         try:
             daily_key = f"cost:agg:daily:{target_date.strftime('%Y%m%d')}"
@@ -390,7 +409,7 @@ class FinOpsManager:
             # Get breakdown by service, category, tenant
             month_key = target_date.strftime("%Y%m")
             
-            breakdown = {
+            breakdown: DailyCostBreakdown = {
                 "total": total_cost,
                 "by_service": {},
                 "by_category": {},
@@ -420,11 +439,11 @@ class FinOpsManager:
             
             return breakdown
             
-        except Exception as e:
-            logger.error(f"Failed to get daily costs: {e}")
+        except Exception:
+            logger.exception("Failed to get daily costs")
             return {"total": 0.0, "by_service": {}, "by_category": {}, "by_tenant": {}}
     
-    async def detect_cost_anomalies(self) -> List[CostAnomaly]:
+    async def detect_cost_anomalies(self) -> list[CostAnomaly]:
         """Detect cost anomalies using statistical analysis"""
         try:
             anomalies = []
@@ -472,7 +491,7 @@ class FinOpsManager:
                         expected_cost=mean_cost,
                         actual_cost=today_cost,
                         deviation_percent=deviation_percent,
-                        detected_at=datetime.utcnow(),
+                        detected_at=datetime.now(UTC).replace(tzinfo=None),
                         severity=severity,
                         root_cause=await self._analyze_anomaly_root_cause(service, daily_costs),
                         recommendation=await self._generate_anomaly_recommendation(service, deviation_percent)
@@ -485,11 +504,11 @@ class FinOpsManager:
             
             return anomalies
             
-        except Exception as e:
-            logger.error(f"Cost anomaly detection failed: {e}")
+        except Exception:
+            logger.exception("Cost anomaly detection failed")
             return []
     
-    async def _get_services_with_costs(self, start_date: date, end_date: date) -> List[str]:
+    async def _get_services_with_costs(self, start_date: date, end_date: date) -> list[str]:
         """Get list of services that have costs in the period"""
         try:
             services = set()
@@ -507,8 +526,8 @@ class FinOpsManager:
             
             return list(services)
             
-        except Exception as e:
-            logger.error(f"Failed to get services with costs: {e}")
+        except Exception:
+            logger.exception("Failed to get services with costs")
             return []
     
     async def _get_service_daily_costs(
@@ -516,7 +535,7 @@ class FinOpsManager:
         service: str, 
         start_date: date, 
         end_date: date
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Get daily costs for a specific service"""
         try:
             daily_costs = {}
@@ -533,15 +552,15 @@ class FinOpsManager:
             
             return daily_costs
             
-        except Exception as e:
-            logger.error(f"Failed to get service daily costs: {e}")
+        except Exception:
+            logger.exception("Failed to get service daily costs")
             return {}
     
     async def _analyze_anomaly_root_cause(
         self, 
         service: str, 
-        daily_costs: Dict[str, float]
-    ) -> Optional[str]:
+        daily_costs: dict[str, float]
+    ) -> str | None:
         """Analyze potential root cause of cost anomaly"""
         
         # Simple heuristics for root cause analysis
@@ -572,7 +591,7 @@ class FinOpsManager:
         self, 
         service: str, 
         deviation_percent: float
-    ) -> Optional[str]:
+    ) -> str | None:
         """Generate recommendation for cost anomaly"""
         
         if abs(deviation_percent) > 100:
@@ -612,13 +631,13 @@ class FinOpsManager:
                 {anomaly.anomaly_id: anomaly.detected_at.timestamp()}
             )
             
-        except Exception as e:
-            logger.error(f"Failed to store anomaly: {e}")
+        except Exception:
+            logger.exception("Failed to store anomaly")
     
-    async def generate_savings_recommendations(self) -> List[SavingsRecommendation]:
+    async def generate_savings_recommendations(self) -> list[SavingsRecommendation]:
         """Generate cost savings recommendations"""
         try:
-            recommendations = []
+            recommendations: list[SavingsRecommendation] = []
             
             # Analyze AI API usage patterns
             ai_recommendations = await self._analyze_ai_api_optimization()
@@ -634,13 +653,13 @@ class FinOpsManager:
             
             return recommendations
             
-        except Exception as e:
-            logger.error(f"Failed to generate savings recommendations: {e}")
+        except Exception:
+            logger.exception("Failed to generate savings recommendations")
             return []
     
-    async def _analyze_ai_api_optimization(self) -> List[SavingsRecommendation]:
+    async def _analyze_ai_api_optimization(self) -> list[SavingsRecommendation]:
         """Analyze AI API usage for optimization opportunities"""
-        recommendations = []
+        recommendations: list[SavingsRecommendation] = []
         
         try:
             # Get AI API usage patterns from last 30 days
@@ -672,7 +691,7 @@ class FinOpsManager:
                     estimated_savings = top_expensive[1] * 0.3 * 0.7  # 70% cost reduction
                     
                     recommendations.append(SavingsRecommendation(
-                        recommendation_id=f"ai-model-optimization-{datetime.utcnow().strftime('%Y%m%d')}",
+                        recommendation_id=f"ai-model-optimization-{datetime.now(UTC).replace(tzinfo=None).strftime('%Y%m%d')}",
                         title="Optimize AI Model Usage",
                         description=f"Consider using Claude Haiku for simpler queries. Current high usage: {top_expensive[0]} (${top_expensive[1]:.2f}/month)",
                         service=top_expensive[0],
@@ -687,7 +706,7 @@ class FinOpsManager:
                 cache_savings = total_ai_cost * 0.15  # 15% savings from caching
                 
                 recommendations.append(SavingsRecommendation(
-                    recommendation_id=f"ai-caching-{datetime.utcnow().strftime('%Y%m%d')}",
+                    recommendation_id=f"ai-caching-{datetime.now(UTC).replace(tzinfo=None).strftime('%Y%m%d')}",
                     title="Implement AI Response Caching",
                     description="Cache similar queries to reduce API calls. Analyze duplicate/similar requests pattern.",
                     service="ai-apis",
@@ -697,23 +716,23 @@ class FinOpsManager:
                     confidence=0.7
                 ))
             
-        except Exception as e:
-            logger.error(f"AI API optimization analysis failed: {e}")
+        except Exception:
+            logger.exception("AI API optimization analysis failed")
         
         return recommendations
     
-    async def _analyze_infrastructure_optimization(self) -> List[SavingsRecommendation]:
+    async def _analyze_infrastructure_optimization(self) -> list[SavingsRecommendation]:
         """Analyze infrastructure for optimization opportunities"""
-        recommendations = []
+        recommendations: list[SavingsRecommendation] = []
         
         # Placeholder for infrastructure analysis
         # In production, this would analyze EC2, RDS, etc. usage
         
         return recommendations
     
-    async def _analyze_storage_optimization(self) -> List[SavingsRecommendation]:
+    async def _analyze_storage_optimization(self) -> list[SavingsRecommendation]:
         """Analyze storage for optimization opportunities"""
-        recommendations = []
+        recommendations: list[SavingsRecommendation] = []
         
         # Placeholder for storage analysis
         # In production, this would analyze S3, EBS usage patterns
@@ -727,11 +746,11 @@ class FinOpsManager:
         period: str,
         allocation_type: CostAllocationType,
         allocation_value: str,
-        alert_thresholds: List[float] = None
+        alert_thresholds: list[float] | None = None
     ) -> CostBudget:
         """Create cost budget"""
         try:
-            budget_id = f"budget-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+            budget_id = f"budget-{datetime.now(UTC).replace(tzinfo=None).strftime('%Y%m%d%H%M%S')}"
             
             budget = CostBudget(
                 budget_id=budget_id,
@@ -752,8 +771,8 @@ class FinOpsManager:
             
             return budget
             
-        except Exception as e:
-            logger.error(f"Failed to create budget: {e}")
+        except Exception:
+            logger.exception("Failed to create budget")
             raise
     
     async def _store_budget(self, budget: CostBudget):
@@ -777,8 +796,8 @@ class FinOpsManager:
                 json.dumps(budget_data)
             )
             
-        except Exception as e:
-            logger.error(f"Failed to store budget: {e}")
+        except Exception:
+            logger.exception("Failed to store budget")
     
     async def _load_budgets(self):
         """Load budgets from Redis"""
@@ -802,13 +821,12 @@ class FinOpsManager:
                     )
                     self.budgets[budget.budget_id] = budget
                     
-        except Exception as e:
-            logger.error(f"Failed to load budgets: {e}")
+        except Exception:
+            logger.exception("Failed to load budgets")
     
     async def _load_allocation_rules(self):
         """Load cost allocation rules"""
         # Placeholder for allocation rules loading
-        pass
     
     async def _cost_collection_scheduler(self):
         """Schedule regular cost data collection"""
@@ -817,8 +835,8 @@ class FinOpsManager:
                 await asyncio.sleep(3600)  # Every hour
                 await self._collect_aws_costs()
                 
-            except Exception as e:
-                logger.error(f"Cost collection scheduler error: {e}")
+            except Exception:
+                logger.exception("Cost collection scheduler error")
                 await asyncio.sleep(1800)  # Wait 30 minutes on error
     
     async def _anomaly_detection_scheduler(self):
@@ -828,8 +846,8 @@ class FinOpsManager:
                 await asyncio.sleep(3600)  # Every hour
                 await self.detect_cost_anomalies()
                 
-            except Exception as e:
-                logger.error(f"Anomaly detection scheduler error: {e}")
+            except Exception:
+                logger.exception("Anomaly detection scheduler error")
                 await asyncio.sleep(1800)
     
     async def _budget_monitoring_scheduler(self):
@@ -839,8 +857,8 @@ class FinOpsManager:
                 await asyncio.sleep(1800)  # Every 30 minutes
                 await self._monitor_budgets()
                 
-            except Exception as e:
-                logger.error(f"Budget monitoring scheduler error: {e}")
+            except Exception:
+                logger.exception("Budget monitoring scheduler error")
                 await asyncio.sleep(900)
     
     async def _collect_aws_costs(self):
@@ -850,7 +868,7 @@ class FinOpsManager:
         
         try:
             # Get yesterday's costs (AWS Cost Explorer has 1-day delay)
-            end_date = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
+            end_date = (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)).strftime('%Y-%m-%d')
             start_date = end_date
             
             response = self.ce_client.get_cost_and_usage(
@@ -881,8 +899,8 @@ class FinOpsManager:
                             tags={"usage_type": usage_type, "source": "aws"}
                         )
             
-        except Exception as e:
-            logger.error(f"AWS cost collection failed: {e}")
+        except Exception:
+            logger.exception("AWS cost collection failed")
     
     def _map_aws_service_to_category(self, service: str) -> CostCategory:
         """Map AWS service to cost category"""
@@ -917,8 +935,8 @@ class FinOpsManager:
                     if utilization_percent >= threshold:
                         await self._send_budget_alert(budget, current_spend, utilization_percent, threshold)
                 
-        except Exception as e:
-            logger.error(f"Budget monitoring failed: {e}")
+        except Exception:
+            logger.exception("Budget monitoring failed")
     
     async def _calculate_budget_spend(self, budget: CostBudget) -> float:
         """Calculate current spend for budget period"""

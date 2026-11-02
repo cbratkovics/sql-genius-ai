@@ -1,8 +1,7 @@
 import json
-from types import SimpleNamespace
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 from backend.api import demo
 from backend.services.anthropic_service import (
@@ -71,7 +70,7 @@ async def test_generation_passes_schema_and_returns_provenance(monkeypatch):
     monkeypatch.setattr(demo.demo_limiter, "check", lambda key: _true())
     response = await demo.demo_sql_generation(
         demo.DemoSQLRequest(query="List every order identifier", schema=schema_payload()),
-        SimpleNamespace(client=SimpleNamespace(host="test")),
+        Request({"type": "http", "client": ("test", 1234)}),
     )
     assert '"dialect":"sqlite"' in captured["prompt"]
     assert '"total_amount"' in captured["prompt"]

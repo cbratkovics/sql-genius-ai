@@ -1,10 +1,19 @@
+import pytest
 from httpx import AsyncClient
+from jose import jwt
+from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
+
+from backend.core.config import settings
+from backend.models.tenant import Tenant
+from backend.services.auth import auth_service
 
 
+@pytest.mark.asyncio
 class TestAuth:
     """Test authentication endpoints"""
     
-    async def test_register_success(self, client: AsyncClient):
+    async def test_register_success(self, client: AsyncClient, mail_outbox):
         """Test successful user registration"""
         response = await client.post("/api/v1/auth/register", json={
             "email": "newuser@test.com",
@@ -18,6 +27,8 @@ class TestAuth:
         assert "user_id" in data
         assert "tenant_id" in data
         assert "message" in data
+        assert len(mail_outbox) == 1
+        assert mail_outbox[0]["to_email"] == "newuser@test.com"
     
     async def test_register_duplicate_email(self, client: AsyncClient, test_user):
         """Test registration with duplicate email"""
@@ -117,3 +128,29 @@ class TestAuth:
         
         assert response.status_code == 200
         assert "Successfully logged out" in response.json()["message"]
+
+    async def test_register_rejects_overlong_password(self, client: AsyncClient, mail_outbox, db_session):
+        response = await client.post("/api/v1/auth/register", json={
+            "email": "long-password@test.com",
+            "password": "é" * 37,
+            "full_name": "Long Password",
+        })
+        assert response.status_code == 422
+        assert mail_outbox == []
+        assert await db_session.scalar(select(func.count()).select_from(Tenant)) == 0
+
+
+    async def test_refresh_database_error_is_server_error(self, client: AsyncClient, monkeypatch):
+        async def unavailable(*args, **kwargs):
+            raise SQLAlchemyError("database is unavailable")
+
+        monkeypatch.setattr(auth_service, "refresh_token", unavailable)
+        response = await client.post("/api/v1/auth/refresh", json={"refresh_token": "token"})
+        assert response.status_code == 500
+        assert response.json() == {"detail": "Token refresh failed"}
+
+
+    async def test_refresh_without_subject_is_unauthorized(self, client: AsyncClient):
+        token = jwt.encode({"type": "refresh"}, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        response = await client.post("/api/v1/auth/refresh", json={"refresh_token": token})
+        assert response.status_code == 401

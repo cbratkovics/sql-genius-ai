@@ -64,7 +64,7 @@ Use Python 3.11 (the pinned backend dependencies predate newer Python releases):
 ```bash
 python3.11 -m venv .venv
 . .venv/bin/activate
-pip install -r backend/requirements.txt
+python -m pip install --require-hashes -r backend/requirements.txt
 cp backend/.env.example backend/.env  # review; do not commit it
 export ANTHROPIC_API_KEY=...
 uvicorn backend.main:app --reload
@@ -84,7 +84,7 @@ A successful response identifies `source`, actual `provider`/`model`, schema and
 ## Checks
 
 ```bash
-pytest -q backend/test_demo_contract.py
+./scripts/check-backend.sh
 cd sql-genius-frontend && npm test && npm run lint && npm run typecheck && npm run build
 ```
 

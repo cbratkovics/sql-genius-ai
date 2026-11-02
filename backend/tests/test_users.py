@@ -1,6 +1,10 @@
+import pytest
 from httpx import AsyncClient
 
+from backend.core.security import create_refresh_token
 
+
+@pytest.mark.asyncio
 class TestUsers:
     """Test user management endpoints"""
     
@@ -20,6 +24,7 @@ class TestUsers:
         response = await client.get("/api/v1/users/me")
         
         assert response.status_code == 401
+        assert response.headers["www-authenticate"] == "Bearer"
     
     async def test_update_current_user(self, client: AsyncClient, auth_headers):
         """Test updating current user profile"""
@@ -117,9 +122,10 @@ class TestUsers:
     
     async def test_delete_user_as_admin(self, client: AsyncClient, admin_auth_headers, db_session, test_tenant):
         """Test deleting user as admin"""
-        from backend.models.user import User, UserRole
-        from backend.core.security import get_password_hash
         import uuid
+
+        from backend.core.security import get_password_hash
+        from backend.models.user import User, UserRole
         
         # Create a user to delete
         user_to_delete = User(
@@ -148,3 +154,11 @@ class TestUsers:
         
         assert response.status_code == 400
         assert "Cannot delete yourself" in response.json()["detail"]
+
+    async def test_refresh_token_cannot_authenticate_profile(self, client: AsyncClient, test_user):
+        response = await client.get(
+            "/api/v1/users/me",
+            headers={"Authorization": f"Bearer {create_refresh_token(test_user.id)}"},
+        )
+        assert response.status_code == 401
+        assert response.headers["www-authenticate"] == "Bearer"

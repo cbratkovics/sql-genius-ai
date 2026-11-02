@@ -1,0 +1,7 @@
+# Keep the pinned Ruff version's full default rule set across the whole backend.
+# Classify imports consistently whether invoked from backend/ or the repo root.
+target-version = "py311"
+src = [".."]
+
+[lint.isort]
+known-first-party = ["backend"]

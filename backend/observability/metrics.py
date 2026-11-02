@@ -1,18 +1,24 @@
-import time
 import asyncio
-from typing import Dict, List, Any
-from dataclasses import dataclass, field
-from enum import Enum
-import logging
-from datetime import datetime, timedelta
-import redis.asyncio as redis
-import json
-from prometheus_client import (
-    Counter, Histogram, Gauge, Info,
-    CollectorRegistry, generate_latest
-)
-import psutil
 import functools
+import json
+import logging
+import time
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from enum import Enum
+from typing import Any
+
+import psutil
+import redis.asyncio as redis
+from prometheus_client import (
+    CollectorRegistry,
+    Counter,
+    Gauge,
+    Histogram,
+    Info,
+    generate_latest,
+)
+
 from backend.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -35,7 +41,7 @@ class SLI:
     threshold: float
     comparison: str  # ">=", "<=", "<", ">"
     unit: str = ""
-    tags: Dict[str, str] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -46,9 +52,9 @@ class SLO:
     sli_name: str
     target: float  # e.g., 99.9 for 99.9%
     window: str  # e.g., "7d", "30d"
-    error_budget: float = None
+    error_budget: float | None = None
     burn_rate_alert_threshold: float = 2.0
-    tags: Dict[str, str] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
 
 
 class MetricsCollector:
@@ -113,7 +119,7 @@ class MetricsCollector:
         self.ai_api_tokens = Counter(
             'ai_api_tokens_total',
             'AI API tokens consumed',
-            ['provider', 'model', 'type'],  # type: input/output
+            ['provider', 'model', 'type'],  # token direction: input/output
             registry=self.registry
         )
         
@@ -262,8 +268,8 @@ class MetricsCollector:
                 
                 await asyncio.sleep(30)  # Collect every 30 seconds
                 
-            except Exception as e:
-                logger.error(f"System metrics collection error: {e}")
+            except Exception:
+                logger.exception("System metrics collection error")
                 await asyncio.sleep(60)
     
     def record_http_request(
@@ -382,7 +388,7 @@ class SLIMonitor:
         self.slis = self._define_slis()
         self.slos = self._define_slos()
         
-    def _define_slis(self) -> Dict[str, SLI]:
+    def _define_slis(self) -> dict[str, SLI]:
         """Define Service Level Indicators"""
         return {
             "api_availability": SLI(
@@ -449,7 +455,7 @@ class SLIMonitor:
             )
         }
     
-    def _define_slos(self) -> Dict[str, SLO]:
+    def _define_slos(self) -> dict[str, SLO]:
         """Define Service Level Objectives"""
         return {
             "api_availability_slo": SLO(
@@ -487,9 +493,9 @@ class SLIMonitor:
             )
         }
     
-    async def evaluate_slis(self) -> Dict[str, float]:
+    async def evaluate_slis(self) -> dict[str, float | None]:
         """Evaluate current SLI values"""
-        results = {}
+        results: dict[str, float | None] = {}
         
         for sli_name, sli in self.slis.items():
             try:
@@ -504,19 +510,19 @@ class SLIMonitor:
                     300,  # 5 minutes
                     json.dumps({
                         "value": value,
-                        "timestamp": datetime.utcnow().isoformat(),
+                        "timestamp": datetime.now(UTC).replace(tzinfo=None).isoformat(),
                         "threshold": sli.threshold,
                         "in_violation": not self._check_threshold(value, sli.threshold, sli.comparison)
                     })
                 )
                 
-            except Exception as e:
-                logger.error(f"Failed to evaluate SLI {sli_name}: {e}")
+            except Exception:
+                logger.exception(f"Failed to evaluate SLI {sli_name}")
                 results[sli_name] = None
         
         return results
     
-    async def evaluate_slos(self) -> Dict[str, Dict[str, Any]]:
+    async def evaluate_slos(self) -> dict[str, dict[str, Any]]:
         """Evaluate SLO compliance"""
         results = {}
         
@@ -552,7 +558,7 @@ class SLIMonitor:
                 }
                 
             except Exception as e:
-                logger.error(f"Failed to evaluate SLO {slo_name}: {e}")
+                logger.exception(f"Failed to evaluate SLO {slo_name}")
                 results[slo_name] = {"error": str(e)}
         
         return results
@@ -588,7 +594,7 @@ class SLIMonitor:
             return value < threshold
         return False
     
-    async def _get_sli_history(self, sli_name: str, window: str) -> List[Dict[str, Any]]:
+    async def _get_sli_history(self, sli_name: str, window: str) -> list[dict[str, Any]]:
         """Get SLI history for time window"""
         try:
             # Parse window (e.g., "7d", "24h")
@@ -610,16 +616,16 @@ class SLIMonitor:
                     timestamp = datetime.fromisoformat(measurement["timestamp"])
                     
                     # Check if within window
-                    if datetime.utcnow() - timestamp <= timedelta(hours=hours):
+                    if datetime.now(UTC).replace(tzinfo=None) - timestamp <= timedelta(hours=hours):
                         history.append(measurement)
             
             return sorted(history, key=lambda x: x["timestamp"])
             
-        except Exception as e:
-            logger.error(f"Failed to get SLI history for {sli_name}: {e}")
+        except Exception:
+            logger.exception(f"Failed to get SLI history for {sli_name}")
             return []
     
-    def _calculate_burn_rate(self, sli_history: List[Dict[str, Any]], slo: SLO) -> float:
+    def _calculate_burn_rate(self, sli_history: list[dict[str, Any]], slo: SLO) -> float:
         """Calculate error budget burn rate"""
         if not sli_history or not slo.error_budget:
             return 0.0
@@ -640,7 +646,7 @@ class SLIMonitor:
 
 
 # Decorator for automatic metrics collection
-def track_duration(metric_name: str, labels: Dict[str, str] = None):
+def track_duration(metric_name: str, labels: dict[str, str] | None = None):
     """Decorator to track function execution duration"""
     def decorator(func):
         if asyncio.iscoroutinefunction(func):
@@ -655,9 +661,9 @@ def track_duration(metric_name: str, labels: Dict[str, str] = None):
                     logger.info(f"Function {func.__name__} completed in {duration:.3f}s")
                     
                     return result
-                except Exception as e:
+                except Exception:
                     duration = time.time() - start_time
-                    logger.error(f"Function {func.__name__} failed after {duration:.3f}s: {e}")
+                    logger.exception(f"Function {func.__name__} failed after {duration:.3f}s")
                     raise
             return async_wrapper
         else:
@@ -672,9 +678,9 @@ def track_duration(metric_name: str, labels: Dict[str, str] = None):
                     logger.info(f"Function {func.__name__} completed in {duration:.3f}s")
                     
                     return result
-                except Exception as e:
+                except Exception:
                     duration = time.time() - start_time
-                    logger.error(f"Function {func.__name__} failed after {duration:.3f}s: {e}")
+                    logger.exception(f"Function {func.__name__} failed after {duration:.3f}s")
                     raise
             return sync_wrapper
     return decorator

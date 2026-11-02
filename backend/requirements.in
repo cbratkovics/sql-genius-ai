@@ -1,0 +1,98 @@
+# Core dependencies
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.33
+python-jose[cryptography]==3.5.0
+bcrypt==5.0.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Database
+sqlalchemy==2.0.25
+alembic==1.13.1
+asyncpg==0.29.0
+aiosqlite==0.19.0
+psycopg2-binary==2.9.9
+
+# Redis for caching
+redis==5.0.1
+hiredis==2.3.2
+
+# Celery for async tasks
+celery==5.3.4
+flower==2.0.1
+
+# AI/ML
+anthropic==0.8.1
+openai==1.8.0
+# LangChain was unused by backend code; avoid its obsolete packaging constraints.
+pandas==2.1.4
+numpy==1.26.3
+
+# Payment processing
+stripe==7.9.0
+
+# Security
+cryptography==50.0.2
+itsdangerous==2.1.2
+
+# Monitoring and logging
+prometheus-client==0.19.0
+opentelemetry-api==1.22.0
+opentelemetry-sdk==1.22.0
+opentelemetry-instrumentation-fastapi==0.43b0
+sentry-sdk[fastapi]==1.39.2
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+httpx==0.26.0
+faker==22.2.0
+
+# Development
+black==23.12.1
+flake8==7.0.0
+mypy==1.19.1
+pre-commit==3.6.0
+
+# File handling
+python-magic==0.4.27
+aiofiles==23.2.1
+
+# Email
+aiosmtplib==3.0.1
+email-validator==2.1.2
+
+# Utils
+python-dateutil==2.8.2
+pytz==2023.3
+tenacity==8.2.3
+
+# Retained integration modules and reproducible CI tools/types
+ruff==0.17.3
+pip-tools==7.6.2
+scipy==1.15.3
+scipy-stubs==1.15.3.0
+scikit-learn==1.7.2
+sqlparse==0.5.5
+boto3==1.43.123
+psutil==7.2.2
+PyJWT==2.15.1
+pyotp==2.9.0
+qrcode[pil]==8.2
+pandas-stubs==2.1.4.231227
+boto3-stubs[s3,ce,pricing]==1.43.123
+types-psutil==7.2.2.20260906
+types-aiofiles==25.1.0.20260518
+types-python-jose==3.5.0.20260408
+types-python-dateutil==2.9.0.20261029
+types-pytz==2026.6.0.20261031
+types-requests==2.33.0.20261030
+types-PyYAML==6.0.12.20261030
+
+# Installer/build tools are locked too, not inherited from an unrelated environment.
+pip==26.3
+setuptools==80.9.0
+wheel==0.48.0
+types-qrcode==8.2.0.20260518

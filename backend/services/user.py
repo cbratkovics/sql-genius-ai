@@ -1,21 +1,22 @@
-from typing import Optional, List
-from datetime import datetime
+from datetime import UTC, datetime
+
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
-from backend.models.user import User, UserRole
+
 from backend.core.security import get_password_hash
+from backend.models.user import User, UserRole
 
 
 class UserService:
-    async def get_by_id(self, db: AsyncSession, user_id: str) -> Optional[User]:
+    async def get_by_id(self, db: AsyncSession, user_id: str) -> User | None:
         result = await db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
     
-    async def get_by_email(self, db: AsyncSession, email: str) -> Optional[User]:
+    async def get_by_email(self, db: AsyncSession, email: str) -> User | None:
         result = await db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
     
-    async def get_by_username(self, db: AsyncSession, username: str) -> Optional[User]:
+    async def get_by_username(self, db: AsyncSession, username: str) -> User | None:
         result = await db.execute(select(User).where(User.username == username))
         return result.scalar_one_or_none()
     
@@ -25,16 +26,21 @@ class UserService:
         tenant_id: str, 
         skip: int = 0, 
         limit: int = 100
-    ) -> List[User]:
+    ) -> list[User]:
         result = await db.execute(
             select(User)
             .where(User.tenant_id == tenant_id)
             .offset(skip)
             .limit(limit)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
     
     async def create(self, db: AsyncSession, user_data: dict) -> User:
+        # Normalize a copy so plaintext passwords never become model attributes.
+        user_data = dict(user_data)
+        if "password" in user_data:
+            user_data["hashed_password"] = get_password_hash(user_data.pop("password"))
+
         # Ensure unique username
         base_username = user_data.get("username", user_data["email"].split("@")[0])
         username = base_username
@@ -57,7 +63,8 @@ class UserService:
         db: AsyncSession, 
         user_id: str, 
         user_data: dict
-    ) -> Optional[User]:
+    ) -> User | None:
+        user_data = dict(user_data)
         # Hash password if provided
         if "password" in user_data:
             user_data["hashed_password"] = get_password_hash(user_data.pop("password"))
@@ -75,13 +82,13 @@ class UserService:
         await db.commit()
         return result.rowcount > 0
     
-    async def activate(self, db: AsyncSession, user_id: str) -> Optional[User]:
+    async def activate(self, db: AsyncSession, user_id: str) -> User | None:
         return await self.update(db, user_id, {"is_active": True})
     
-    async def deactivate(self, db: AsyncSession, user_id: str) -> Optional[User]:
+    async def deactivate(self, db: AsyncSession, user_id: str) -> User | None:
         return await self.update(db, user_id, {"is_active": False})
     
-    async def verify_email(self, db: AsyncSession, user_id: str) -> Optional[User]:
+    async def verify_email(self, db: AsyncSession, user_id: str) -> User | None:
         return await self.update(db, user_id, {"is_verified": True})
     
     async def update_role(
@@ -89,27 +96,27 @@ class UserService:
         db: AsyncSession, 
         user_id: str, 
         role: UserRole
-    ) -> Optional[User]:
+    ) -> User | None:
         return await self.update(db, user_id, {"role": role})
     
     async def update_permissions(
         self, 
         db: AsyncSession, 
         user_id: str, 
-        permissions: List[str]
-    ) -> Optional[User]:
+        permissions: list[str]
+    ) -> User | None:
         return await self.update(db, user_id, {"permissions": permissions})
     
     async def increment_query_count(
         self, 
         db: AsyncSession, 
         user_id: str
-    ) -> Optional[User]:
+    ) -> User | None:
         user = await self.get_by_id(db, user_id)
         if user:
             user.total_queries += 1
             user.queries_this_month += 1
-            user.last_query_at = datetime.utcnow()
+            user.last_query_at = datetime.now(UTC)
             await db.commit()
             await db.refresh(user)
         return user
@@ -128,7 +135,7 @@ class UserService:
         tenant_id: str, 
         query: str, 
         limit: int = 10
-    ) -> List[User]:
+    ) -> list[User]:
         result = await db.execute(
             select(User)
             .where(
@@ -139,7 +146,7 @@ class UserService:
             )
             .limit(limit)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
 
 user_service = UserService()
