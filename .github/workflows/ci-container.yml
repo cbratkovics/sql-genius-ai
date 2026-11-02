@@ -1,10 +1,10 @@
 name: Optional backend container check
 on:
   pull_request:
-    paths: ["backend/**", "Dockerfile.backend", ".github/workflows/ci-container.yml"]
+    paths: ["backend/**", "Dockerfile.backend", ".dockerignore", "scripts/**", ".github/workflows/ci-container.yml"]
   push:
     branches: [main]
-    paths: ["backend/**", "Dockerfile.backend", ".github/workflows/ci-container.yml"]
+    paths: ["backend/**", "Dockerfile.backend", ".dockerignore", "scripts/**", ".github/workflows/ci-container.yml"]
 permissions:
   contents: read
 jobs:

@@ -4,6 +4,7 @@ on:
     paths:
       - "backend/**"
       - "scripts/check-backend.sh"
+      - "Makefile"
       - ".github/workflows/ci-backend.yml"
       - "Dockerfile.backend"
       - "infrastructure/docker/Dockerfile*"
@@ -12,6 +13,7 @@ on:
     paths:
       - "backend/**"
       - "scripts/check-backend.sh"
+      - "Makefile"
       - ".github/workflows/ci-backend.yml"
       - "Dockerfile.backend"
       - "infrastructure/docker/Dockerfile*"
