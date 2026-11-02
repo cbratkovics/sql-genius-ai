@@ -27,7 +27,7 @@ Passing the policy is not a correctness evaluation or a general security sandbox
 
 ## No-key quick start
 
-Requirements: Node.js 22+ and npm. Node 22 provides the type-stripping test runner used by the checked-in scripts and CI.
+Requirements: Node.js 22.x and npm. Node 22 provides the type-stripping test runner used by the checked-in scripts and CI.
 
 ```bash
 cd sql-genius-frontend

@@ -2,7 +2,7 @@
 
 The maintained public playground matches questions to reviewed query templates, labels ambiguous/unsupported/exploratory requests, and executes accepted read-only SQL in real browser SQLite only after **Execute**. No account, API key, hosted database, provider fallback, editor CDN, or runtime analytics is used. Editable SQL uses a labeled native textarea with keyboard and focus support. The latest operation notification appears in normal layout beside the SQL controls, so stacked messages cannot cover inputs, results, or errors.
 
-Use Node 22+ (CI uses 22):
+Use Node 22.x (matching CI and the Vercel build major):
 
 ```bash
 npm ci

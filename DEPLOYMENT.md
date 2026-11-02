@@ -10,7 +10,7 @@ Preserve the GitHub repository `cbratkovics/sql-genius-ai`, its established URL,
 | --- | --- |
 | Root directory | `sql-genius-frontend` |
 | Framework | Next.js, static export via `output: 'export'` |
-| Node | 22.x (package requires 22+) |
+| Node | 22.x (package engines and CI both target major 22) |
 | Install | `npm ci` |
 | Build | `npm run build` |
 | Output directory | `out` |

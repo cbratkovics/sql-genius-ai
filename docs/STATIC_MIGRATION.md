@@ -104,3 +104,22 @@ Deleted workflow/blueprint entries below are retained under the new historical e
 | `sql-genius-frontend/playwright.config.ts` | Added |
 | `sql-genius-frontend/scripts/preview-static.mjs` | Added |
 | `sql-genius-frontend/tests/browser/static-export.spec.ts` | Added |
+
+## Node 22 build-major follow-up — November 2, 2026
+
+Based on reviewed commit `4a70d307d50855bd3382716ba3fc2a65dd7de1ae` on `review/static-public-demo`, with existing draft PR #6 against `main`. Pinned `engines.node` to `22.x` in the package and corresponding root lockfile metadata, and corrected the root/frontend README and deployment requirement. This supersedes the historical Node 22+ range recorded above; earlier validation records are preserved. Application implementation and tests are unchanged. Comparing both manifests with the reviewed commit confirms only the root engine field changed; all locked dependency versions and metadata remain identical.
+
+Using **Node 22.23.4 / npm 11.9.0**, ran from `sql-genius-frontend`:
+
+```bash
+npm ci
+npm test
+npm run lint
+npm run typecheck
+NEXT_TELEMETRY_DISABLED=1 npm run build
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:static
+```
+
+All passed locally: 13 unit tests, lint, types, successful static export to `out/`, and 6 browser tests with no failures/skips. `git diff --check` passed. Vercel should select **Node 22.x**. No dependency upgrade, application change, or test change was required.
+
+**Remote evidence boundary:** the owner reports Vercel deployment `dpl_Bs5WFEcusaXy8Dfr11idJ71Ep2TG` failed for the previous reviewed commit. Its underlying build error has not been established, and no actual Vercel build log was available. The read-only PR #6 status query returned `Post "https://api.github.com/graphql": Forbidden`; GitHub CI and current hosted-preview status were not independently observed. No PR creation was retried. This local Node-range correction is not evidence that the reported Vercel failure is fixed. Production behavior and billing remain unverified and owner-controlled; no deployment promotion, infrastructure deletion, or account-plan change was performed.
