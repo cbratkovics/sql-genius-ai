@@ -133,3 +133,45 @@ Changed only `vercel.json`'s Output Directory from `out` to **`.next`** and corr
 Using Node **22.23.4 / npm 11.9.0**, reran from `sql-genius-frontend`: `npm test` (13 passed), `npm run lint`, `npm run typecheck`, `NEXT_TELEMETRY_DISABLED=1 npm run build`, and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:static` (6 passed, no failures/skips). All passed. Verified the configured `.next/routes-manifest.json` exists, `.next/export-detail.json` reports success and selects `out/`, all maintained exported pages exist, and exported WASM matches the locked dependency byte-for-byte. `git diff --check` passed. The installed dependencies were reused; no install or upgrade was needed. An initial command ran from the repository root and failed because there is no root package.json; the reported successful checks ran from the frontend directory.
 
 This corrects the diagnosed local configuration mismatch, not a verified hosted deployment. GitHub CI and a new Vercel preview result remain unobserved at this handoff; the prior GitHub API access restriction has not been bypassed. No new PR or production deployment was created, no security check was disabled, and production/billing/Render retirement remain owner-controlled. Verify the next existing-project non-production preview and diagnose any newly reported first actionable error separately.
+
+## Bounded backend CI triage — November 2, 2026
+
+**External verification supplied by the owner:** Vercel deployment and static frontend CI (including `npm run test:static`) succeeded for `898b5b8ffb63d394ca5390b009ea233e0f204e18`. Backend run `41533246447`, job `125578560334`, failed at `ruff check .`; its mypy and pytest steps were skipped. These are supplied remote results, not fresh API observations. Hosted functional behavior, production rollout, and billing are not established by deployment/build success. All working hosting settings remain untouched: Next.js framework, root `sql-genius-frontend`, Vercel Output Directory `.next`, Node 22.x, Next `output: 'export'`, portable export `out/`.
+
+### Lint reproduction and version boundary
+
+Inspected the unchanged `ci-backend.yml`: Python 3.11, working directory `backend`, requirements install followed by **unpinned** `pip install ruff pytest mypy`, then `ruff check .`. No repository Ruff configuration is present. Job-log retrieval returned `Forbidden` for the GitHub API. The exact Ruff version installed in that job is therefore **not yet verified**; the owner can supply its installation line or activate `api.github.com` network access. A narrowly scoped environment draft addition was saved for that host; draft persistence alone does not activate access.
+
+For a controlled local comparison, the workflow's unpinned Ruff requirement resolved to **Ruff 0.17.3** under isolated Python **3.11.17**. Ran the actual `ruff check .` from both `/workspace/sql-genius-ai/backend` at `898b5b8` and a detached temporary worktree at `/tmp/sql-genius-ci-baseline/backend`, baseline `ac062151000422c291cf0ec803cda988c325353a`. The same executable and default configuration were used; only cache paths differed, outside the checkouts. Both commands exited **1**, reporting **633 diagnostics in 37 files**. Compared JSON diagnostics, resolved settings, and linted file lists after normalizing checkout/cache prefixes: all match exactly, including messages, locations, fixes, and selected rules. Under this measured version/configuration, **0 diagnostics are introduced by the PR** and all 633 are already present in the baseline. This is an executed comparison, not an inference from unchanged application files.
+
+Rule counts: `UP006=182`, `UP045=103`, `BLE001=101`, `B008=47`, `DTZ003=47`, `I001=37`, `RUF013=35`, `UP035=32`, `TRY002=18`, `TRY201=10`, `RUF059=4`, `RUF010=4`, `SIM102=3`, `UP007=2`, `SIM117=2`, `ASYNC230=2`, and one each of `PERF102`, `PIE790`, `LOG014`, `RUF022`. First exact diagnostics include:
+
+```text
+api/auth.py:1:1: I001 Import block is un-sorted or un-formatted
+api/auth.py:23:19: UP045 Use `X | None` for type annotations
+api/auth.py:50:24: B008 Do not perform function call `Depends` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+api/auth.py:63:15: TRY201 Use `raise` without specifying exception name
+api/auth.py:64:12: BLE001 Do not catch blind exception: `Exception`
+```
+
+Exact complete diagnostics/settings were retained as local evidence outside the repository under `/workspace/sql-genius-ci-evidence/`; no raw test logs or generated outputs are committed. The normalized 633-line diagnostic list has SHA-256 `0c7583713065a2c20a259d6afeff92716a0fbe6286ac866cbb18144627ec7949`. No repository configuration drift was found. Because Ruff is unpinned and the failed job's version is unavailable, tool-version drift in that specific run is **unconfirmed**, not asserted as its cause. The comparison must be repeated if its logged version differs from 0.17.3.
+
+### Independent backend tests
+
+Installed `backend/requirements.txt` in an external Python 3.11.17 virtual environment without changing dependency declarations. Test versions: pytest 7.4.4, pytest-asyncio 0.23.3, FastAPI 0.109.0, SQLAlchemy 2.0.25, HTTPX 0.26.0, Passlib 1.7.4, transitive bcrypt 5.0.0. Installation completed; pip also reported an isolated seed-tool conflict between wheel 0.48.0 and the requirements-resolved packaging 23.2. No dependency workaround was applied to the repository.
+
+Ran the following pytest targets from each checkout's `backend` directory through the same external offline harness, with `PYTHONPATH` pointing to that checkout. The harness forces in-memory SQLite, removes provider credentials, rejects outbound INET connections/DNS, and makes SMTP sending fail explicitly; provider generation in the contract suite is stubbed by the existing tests. No paid provider, mail delivery, or hosted/production database was used.
+
+| Target | Head | Baseline |
+| --- | --- | --- |
+| `pytest -q test_demo_contract.py` | 9 passed | 9 passed |
+| `pytest -q` (workflow target) | Exit 3 during collection; no completed suite | Same |
+| `pytest -q tests` (account subset) | 4 passed, 2 failed, 16 fixture errors | Same test IDs and counts |
+
+The full target raises `sqlalchemy.exc.InvalidRequestError: Table 'tenants' is already defined for this MetaData instance` during collection on both commits. The isolated account target exposes a Passlib/bcrypt backend-probe `ValueError: password cannot be longer than 72 bytes`, later `UNIQUE constraint failed: tenants.slug` fixture errors, registration returning 500 instead of 200, and unauthorized access returning 403 instead of the expected 401. These are observed baseline failures under the identical local dependencies, not new migration defects. The bcrypt issue involves an unconstrained transitive dependency; it is separate from the Ruff step that actually failed remotely. Local mypy was not run; remote mypy/pytest were skipped and cannot be described as passing.
+
+### Disposition
+
+No introduced lint failure or backend code correction was identified under the measured toolchain. Do not mass-fix the 633 findings, add ignores, weaken rules, suppress failures, or disable backend CI in this static-hosting PR. A separate backend follow-up should establish/pin the intended Ruff version and configuration, remediate the existing lint debt, and diagnose test collection, compatible test dependencies, fixture isolation, and HTTP contract failures in reviewable changes.
+
+Backend CI remains red and is a release/review blocker if required by branch protection; required-check policy has not been independently inspected. Static deployment/frontend CI success does not waive that check or validate the optional backend. This triage changes documentation only; no production deployment, merge, Render/account change, or working deployment setting is changed. Exact failed-run version matching remains pending access or the job's installation log.
