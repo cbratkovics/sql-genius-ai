@@ -1,7 +1,8 @@
-# Render deployment configuration for SQL Genius AI
+# HISTORICAL OPTIONAL EXAMPLE — not used by the static public demo.
+# Service plans and prices must be reviewed independently; this is not a live-state record.
 databases:
   - name: sql-genius-db
-    plan: free # upgrade to starter ($7/month) for production
+    plan: free # Historical template only; verify current eligibility and pricing.
     databaseName: sqlgenius
     user: sqlgenius
     region: oregon
@@ -14,7 +15,7 @@ services:
     dockerfilePath: ./infrastructure/docker/Dockerfile.backend
     dockerContext: .
     region: oregon
-    plan: free # upgrade to starter ($7/month) for production
+    plan: free # Historical template only; verify current eligibility and pricing.
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -37,4 +38,4 @@ services:
         value: "INFO"
       - key: DEMO_MODE
         value: "true"
-    autoDeploy: true
+    autoDeploy: false

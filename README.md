@@ -2,7 +2,7 @@
 
 **SQL Analytics and Decision-Support Playground**
 
-SQL Genius AI demonstrates an inspectable analytics workflow: select and inspect a deterministic sample schema, express a question or choose a curated example, review/edit SQL, explicitly run an accepted read-only query in browser SQLite, and inspect/export the preview. Generation now runs entirely in the browser with no account, API key, backend, or per-request cost.
+SQL Genius AI demonstrates an inspectable analytics workflow: select and inspect a deterministic sample schema, express a question or choose a curated example, review/edit SQL, explicitly run an accepted read-only query in browser SQLite, and inspect/export the preview. Generation and SQLite execution run entirely in the browser with no account, API key, backend, or per-request cost. The public deployment is a static Next.js export; on an eligible free static-hosting plan it needs no recurring hosting, API, or database spend. Account eligibility, usage limits, and actual billing require owner verification.
 
 ## Capability and evidence
 
@@ -35,7 +35,25 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000/demo`, choose **Sample Queries**, load a curated query, inspect it, then click **Execute**. Before development and production builds, a preparation script copies the matching WASM file from the locked `sql.js` package into the ignored `public/sql-wasm.wasm` runtime path. No binary is committed, and no CDN or API key is required for this path.
+Open `http://localhost:3000/demo`, choose **Sample Queries**, load a curated query, inspect it, then click **Execute**. Before development and production builds, a preparation script copies the matching WASM file from the locked `sql.js` package into the ignored `public/sql-wasm.wasm` runtime path. No binary is committed, and no CDN or API key is required for this path. The accessible SQL textarea uses no editor CDN, and no runtime telemetry is included.
+
+## Static build and preview
+
+```bash
+cd sql-genius-frontend
+npm ci
+npm test
+npm run lint
+npm run typecheck
+npm run build
+npm run preview
+```
+
+The build emits `sql-genius-frontend/out/` including `/`, `/demo/`, `/metrics/`, and the matching SQLite WASM. Preview listens on port 4173 and serves only the exported files with the hosting security headers. `next start` does not serve a static export. No frontend environment variables are required, including when legacy backend examples are present.
+
+For browser acceptance, after building run `npx playwright install chromium` and `npm run test:static`. A system Chromium can be selected with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium`. The tests reject cross-origin/API runtime requests before page load, exercise all maintained routes, execute actual fixture queries, and verify core operations offline. Request evidence is attached in `test-results/static-results.json`.
+
+The initial deployment target is the **existing Vercel project and URL**, with root directory `sql-genius-frontend`, build command `npm run build`, and output directory `out`. Keep its existing repository and domain association. Review Hobby eligibility and usage limits. No alternative backend/database, account creation, GitHub Pages configuration, or deployment is part of this change. See [DEPLOYMENT.md](DEPLOYMENT.md) for rollout and Render retirement.
 
 ## Legacy optional generation backend
 
@@ -79,7 +97,8 @@ These checks cover contracts and deterministic implementation behavior. The loca
 - `backend/services/anthropic_service.py`: optional provider adapter.
 - `backend/test_demo_contract.py`: backend contract tests (provider calls are stubbed).
 - `backend/services/`, `backend/tasks/`, `infrastructure/`: broader optional/reference modules; presence does not establish operation.
-- `DEPLOYMENT.md`: maintained templates and rollout checks, not proof of deployment.
+- `DEPLOYMENT.md`: static hosting settings and owner rollout/retirement checks.
+- `infrastructure/examples/`: historical optional Render blueprint and archived deployment workflows; not part of the public demo.
 
 ## Important limitations
 

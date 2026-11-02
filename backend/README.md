@@ -1,6 +1,6 @@
-# SQL Genius AI backend
+# SQL Genius AI backend (optional historical service)
 
-FastAPI service containing the optional live-generation route plus account and reference integration modules. The browser sample playground does not require this service. Presence of tenant, cache, queue, billing, monitoring, or recovery code does not establish that those services are deployed or operational.
+FastAPI service containing the optional live-generation route plus account and reference integration modules. The maintained static public playground has no import, proxy, or runtime dependency on this service. Do not deploy it as part of the default public path. Presence of tenant, cache, queue, billing, monitoring, or recovery code does not establish that those services are deployed or operational.
 
 ## Generation-only setup
 

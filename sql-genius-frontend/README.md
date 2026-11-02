@@ -1,12 +1,33 @@
-# SQL Genius AI frontend
+# SQL Genius AI static frontend
 
-Next.js frontend for the **Natural-Language SQL and Analytics Playground**. The Generate button works locally for $0: it retrieves the closest reviewed intent for the selected schema or produces a conservative schema-aware preview/count fallback. It requires no account, API key, backend, or network request. An accepted read-only statement executes in local sql.js only after the user clicks Run. The dev/build lifecycle generates the ignored WASM runtime asset from the locked dependency; the repository does not commit the binary.
+The maintained public playground matches questions to reviewed query templates, labels ambiguous/unsupported/exploratory requests, and executes accepted read-only SQL in real browser SQLite only after **Execute**. No account, API key, hosted database, provider fallback, editor CDN, or runtime analytics is used. Editable SQL uses a labeled native textarea with keyboard and focus support. The latest operation notification appears in normal layout beside the SQL controls, so stacked messages cannot cover inputs, results, or errors.
+
+Use Node 22+ (CI uses 22):
 
 ```bash
 npm ci
 npm run dev
-npm run lint
-npm run build
 ```
 
-Local generation is visibly labeled with its match type, confidence, and assumptions and is never automatically executed. Result previews are capped and CSV exports quote delimiters/newlines/quotes, preserve nulls, and prefix text that spreadsheet software could interpret as a formula. A legacy optional provider route remains in the backend for compatibility, but the frontend does not call it. See the root README for boundaries and contracts.
+Development uses Webpack so the existing sql.js browser fallbacks apply. Production is a portable static export with directory-style routes:
+
+```bash
+npm test
+npm run lint
+npm run typecheck
+npm run build
+npm run preview
+```
+
+`out/` is the complete deployment artifact. The preview serves `out/` on port 4173 (`PORT` can override it), applies the all-route Vercel security headers, and returns real 404s rather than a single-page-app fallback. Do not use `next start`. `predev`/`prebuild` copy WASM from the locked sql.js dependency to the ignored public runtime path; the export includes that file.
+
+```bash
+npx playwright install chromium
+npm run test:static
+```
+
+The browser tests launch the static preview, install a request policy before navigation, fail unexpected cross-origin or API requests, record request evidence, validate CSP/WASM, and execute core operations offline after loading assets. If downloading Chromium is unavailable but a compatible binary exists, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its absolute path. CI installs Playwright Chromium on a standard runner. Test reports are ignored local outputs under `test-results/`.
+
+Deploy the reviewed artifact to the existing Vercel project/URL on an eligible Hobby account: root `sql-genius-frontend`, `npm run build`, output `out`. `vercel.json` supplies static hosting headers and no proxy rewrites or functions. It must be configured at the hosting layer on other hosts too. CSP permits same-origin connections, WebAssembly compilation, Next's inline hydration scripts, and inline styles; it does not allow general JavaScript eval, external scripts, frames, or workers. The browser suite tests these headers against the actual export. Dashboard-level Vercel Analytics/Speed Insights injection must remain disabled and needs verification at the real URL.
+
+Preview results are capped at 500 rows and 1,000,000 collected UTF-8 bytes; CSV exports quote delimiters/newlines/quotes, preserve nulls, and prefix formula-like text. SQLite executes on the main thread with no hard CPU cancellation. Only bundled synthetic databases are supported. The optional Python project is retained outside this production graph. See the root README and DEPLOYMENT.md for evidence and retirement steps.

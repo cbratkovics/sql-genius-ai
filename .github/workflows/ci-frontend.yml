@@ -1,4 +1,4 @@
-name: Frontend CI
+name: Static frontend CI
 on:
   pull_request:
     paths: ["sql-genius-frontend/**", ".github/workflows/ci-frontend.yml"]
@@ -20,3 +20,11 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:static
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: static-browser-evidence
+          path: sql-genius-frontend/test-results/
+          retention-days: 7

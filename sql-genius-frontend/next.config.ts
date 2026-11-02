@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "export",
+  trailingSlash: true,
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // Don't attempt to load these Node.js modules in the browser

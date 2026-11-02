@@ -23,11 +23,15 @@ cd sql-genius-frontend
 npm ci
 npm test
 npm run lint
-npx tsc --noEmit
+npm run typecheck
 npm run build
+npx playwright install chromium
+npm run test:static
 ```
 
 Tests independently check line count versus units, parent/child fan-out, relationship metadata, question-state behavior, SQL policy and CSV handling, and execute every e-commerce curated query against the fixture.
+
+The production artifact is the static `sql-genius-frontend/out/` directory. Browser acceptance runs this artifact with hosting headers, records every runtime request, rejects cross-origin/API dependencies, and exercises core operations offline. See `STATIC_MIGRATION.md` for the local migration record; deployment and billing remain separately unverified.
 
 ## Limitations
 

@@ -44,13 +44,13 @@ export default function Home() {
     {
       icon: <Globe className="w-6 h-6" />,
       title: "Documented boundaries",
-      description: "Synthetic fixtures and browser policy are scoped honestly; the provider backend is optional"
+      description: "Synthetic fixtures and browser policy are scoped honestly; no backend or API key is needed"
     }
   ];
 
   const stats = [
     { value: "SQLite", label: "Local Engine" },
-    { value: "FastAPI", label: "Backend Framework" },
+    { value: "Static", label: "Public Deployment" },
     { value: "Next.js 15", label: "Frontend" },
     { value: "TypeScript", label: "Type Safety" }
   ];
@@ -105,7 +105,7 @@ export default function Home() {
           </h1>
           
           <p className="text-gray-300 text-lg max-w-2xl mx-auto mb-8">
-            Natural-language SQL and analytics playground with optional provider generation.
+            Browser-based SQL playground with reviewed local query matching.
             Explore deterministic sample schemas, inspect SQL, and run supported queries locally in SQLite.
           </p>
           
@@ -190,9 +190,9 @@ export default function Home() {
               <div className="w-20 h-20 bg-blue-600/20 rounded-full mx-auto mb-4 flex items-center justify-center">
                 <Code className="w-10 h-10 text-blue-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">FastAPI Backend</h3>
+              <h3 className="text-xl font-semibold text-white mb-2">Reviewed Local Matching</h3>
               <p className="text-gray-400 text-sm">
-                Optional typed generation API; provider output is returned as not executed
+                Reviewed query templates and conservative schema-aware previews; no model API calls
               </p>
             </div>
             
@@ -262,7 +262,7 @@ export default function Home() {
             Portfolio Demo Notice
           </h3>
           <p className="text-gray-300 text-sm">
-            This portfolio project demonstrates analytics and applied-AI engineering. Curated examples need no key; optional live generation requires configured backend credentials. Accepted SQL executes locally only against bundled synthetic sample data. No aggregate usage or model-accuracy metrics are claimed. View the full implementation
+            This portfolio project demonstrates an inspectable analytics workflow. Generation uses reviewed query templates in your browser with no API key or backend. Accepted SQL executes locally only against bundled synthetic sample data. No aggregate usage or model-accuracy metrics are claimed. View the full implementation
             at{' '}
             <a 
               href="https://github.com/cbratkovics/sql-genius-ai" 
@@ -297,7 +297,7 @@ export default function Home() {
             </div>
           </div>
           <div className="text-center mt-6 text-gray-500 text-sm">
-            © 2024 SQL Genius AI. Built with FastAPI, Next.js, and Claude AI.
+            SQL Genius AI. Built with Next.js and in-browser SQLite.
           </div>
         </div>
       </footer>

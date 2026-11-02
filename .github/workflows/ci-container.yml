@@ -1,0 +1,20 @@
+name: Optional backend container check
+on:
+  pull_request:
+    paths: ["backend/**", "Dockerfile.backend", ".github/workflows/ci-container.yml"]
+  push:
+    branches: [main]
+    paths: ["backend/**", "Dockerfile.backend", ".github/workflows/ci-container.yml"]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: false

@@ -15,7 +15,6 @@ import {
   Download,
   ChevronDown
 } from 'lucide-react';
-import Editor from '@monaco-editor/react';
 import { useDatabase, useSQLQuery } from '@/hooks/useDatabase';
 import { schemas } from '@/data/schemas';
 import { getQueriesBySchema } from '@/data/queries';
@@ -25,6 +24,7 @@ import * as Tabs from '@radix-ui/react-tabs';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { rowsToCsv } from '@/lib/csv';
+import PlaygroundNotifications from '@/components/PlaygroundNotifications';
 import { generateLocalSQL, resolveBestCustomers, type LocalGenerationResult, type ClarificationOption } from '@/lib/sql/local-generator';
 
 export default function SQLPlayground() {
@@ -187,9 +187,10 @@ export default function SQLPlayground() {
 
             {/* Schema Selector */}
             <div className="mt-4 flex items-center space-x-3">
-              <label className="text-white font-semibold text-sm">Schema:</label>
+              <label htmlFor="schema-selector" className="text-white font-semibold text-sm">Schema:</label>
               <div className="relative">
                 <select
+                  id="schema-selector"
                   value={selectedSchemaId}
                   onChange={(e) => {
                     const schema = schemas.find(s => s.id === e.target.value);
@@ -243,7 +244,7 @@ export default function SQLPlayground() {
 
               {/* Playground Tab */}
               <Tabs.Content value="playground" className="space-y-6">
-                {/* Real AI Notice */}
+                {/* Local generation notice */}
                 <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-400" />
@@ -256,11 +257,12 @@ export default function SQLPlayground() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Natural Language Input */}
                   <div className="space-y-4">
-                    <label className="text-white font-semibold text-lg flex items-center justify-between">
+                    <label htmlFor="natural-language-query" className="text-white font-semibold text-lg flex items-center justify-between">
                       <span>Natural Language Query</span>
                       <span className="text-xs text-gray-400 font-normal">Ask in plain English</span>
                     </label>
                     <textarea
+                      id="natural-language-query"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="e.g., Show me total sales by month for the last year..."
@@ -285,7 +287,7 @@ export default function SQLPlayground() {
                   {/* Generated SQL Output */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <label className="text-white font-semibold text-lg">Generated SQL</label>
+                      <label htmlFor="sql-editor" className="text-white font-semibold text-lg">Generated SQL</label>
                       <div className="flex space-x-2">
                         <button
                           onClick={handleCopySQL}
@@ -309,21 +311,15 @@ export default function SQLPlayground() {
                         </button>
                       </div>
                     </div>
+                    <PlaygroundNotifications />
                     <div className="h-40 rounded-lg overflow-hidden border border-gray-700">
-                      <Editor
-                        height="160px"
-                        defaultLanguage="sql"
+                      <textarea
+                        id="sql-editor"
+                        aria-label="Generated SQL"
                         value={generatedSQL}
-                        onChange={(value) => { setGeneratedSQL(value || ''); setGeneration(null); setSqlSource('local'); setExecutedSQL(null); sqlQuery.reset(); }}
-                        theme="vs-dark"
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 14,
-                          wordWrap: 'on',
-                          lineNumbers: 'on',
-                          scrollBeyondLastLine: false,
-                          automaticLayout: true,
-                        }}
+                        onChange={(event) => { setGeneratedSQL(event.target.value); setGeneration(null); setSqlSource('local'); setExecutedSQL(null); sqlQuery.reset(); }}
+                        spellCheck={false}
+                        className="h-full w-full resize-none bg-gray-900 p-3 font-mono text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                       />
                     </div>
 
