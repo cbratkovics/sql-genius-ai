@@ -1,22 +1,23 @@
-from typing import Optional
+from typing import Annotated
+
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.core.config import settings
 from backend.core.database import get_db
-from backend.models.user import User
 from backend.models.tenant import Tenant
-from backend.services.user import user_service
+from backend.models.user import User
 from backend.services.tenant import tenant_service
+from backend.services.user import user_service
 
-
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    db: AsyncSession = Depends(get_db),
-    token: HTTPAuthorizationCredentials = Depends(security)
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token: Annotated[HTTPAuthorizationCredentials | None, Depends(security)]
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -24,20 +25,23 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
+    if token is None:
+        raise credentials_exception
+
     try:
         payload = jwt.decode(
             token.credentials, 
             settings.SECRET_KEY, 
             algorithms=[settings.ALGORITHM]
         )
-        user_id: str = payload.get("sub")
-        token_type: str = payload.get("type")
+        user_id = payload.get("sub")
+        token_type = payload.get("type")
         
-        if user_id is None or token_type != "access":
+        if not isinstance(user_id, str) or token_type != "access":
             raise credentials_exception
             
-    except JWTError:
-        raise credentials_exception
+    except JWTError as exc:
+        raise credentials_exception from exc
     
     user = await user_service.get_by_id(db, user_id)
     if user is None:
@@ -53,7 +57,7 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: User = Depends(get_current_user),
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
     if not current_user.is_active:
         raise HTTPException(
@@ -64,19 +68,19 @@ async def get_current_active_user(
 
 
 async def get_current_superuser(
-    current_user: User = Depends(get_current_user),
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
     if not current_user.is_superuser:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"
         )
     return current_user
 
 
 async def get_current_tenant(
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)]
 ) -> Tenant:
     if not current_user.tenant_id:
         raise HTTPException(
@@ -101,8 +105,8 @@ async def get_current_tenant(
 
 
 async def get_tenant_admin(
-    current_user: User = Depends(get_current_active_user),
-    current_tenant: Tenant = Depends(get_current_tenant)
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_tenant: Annotated[Tenant, Depends(get_current_tenant)]
 ) -> User:
     if not current_user.is_tenant_admin():
         raise HTTPException(
@@ -118,7 +122,7 @@ class RequirePermissions:
     
     def __call__(
         self, 
-        current_user: User = Depends(get_current_active_user)
+        current_user: Annotated[User, Depends(get_current_active_user)]
     ) -> User:
         for permission in self.permissions:
             if not current_user.has_permission(permission):
@@ -129,10 +133,10 @@ class RequirePermissions:
         return current_user
 
 
-def get_optional_user(
-    db: AsyncSession = Depends(get_db),
-    token: Optional[HTTPAuthorizationCredentials] = Depends(security)
-) -> Optional[User]:
+async def get_optional_user(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token: Annotated[HTTPAuthorizationCredentials | None, Depends(security)]
+) -> User | None:
     if not token:
         return None
     
@@ -142,10 +146,10 @@ def get_optional_user(
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
-        user_id: str = payload.get("sub")
-        if user_id is None:
+        user_id = payload.get("sub")
+        if not isinstance(user_id, str):
             return None
     except JWTError:
         return None
     
-    return user_service.get_by_id(db, user_id)
+    return await user_service.get_by_id(db, user_id)

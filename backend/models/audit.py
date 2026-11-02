@@ -1,8 +1,26 @@
-from sqlalchemy import Column, String, Text, DateTime, JSON, Enum, Boolean, Integer, ForeignKey
-from sqlalchemy.orm import relationship
-from backend.models.base import Base, TimestampMixin, UUIDMixin, TenantMixin
+from __future__ import annotations
+
 import enum
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from backend.models.base import Base, TenantMixin, TimestampMixin, UUIDMixin
+
+if TYPE_CHECKING:
+    from backend.models.tenant import Tenant
+    from backend.models.user import User
 
 
 class AuditEventType(str, enum.Enum):
@@ -44,43 +62,43 @@ class AuditLog(Base, UUIDMixin, TimestampMixin, TenantMixin):
     __tablename__ = "audit_logs"
     
     # Event details
-    event_type = Column(Enum(AuditEventType), nullable=False, index=True)
-    severity = Column(Enum(AuditSeverity), default=AuditSeverity.LOW, nullable=False)
+    event_type: Mapped[AuditEventType] = mapped_column(Enum(AuditEventType), nullable=False, index=True)
+    severity: Mapped[AuditSeverity] = mapped_column(Enum(AuditSeverity), default=AuditSeverity.LOW, nullable=False)
     
     # User and session info
-    user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
-    session_id = Column(String, nullable=True)
-    ip_address = Column(String, nullable=True)
-    user_agent = Column(String, nullable=True)
+    user_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True, index=True)
+    session_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String, nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String, nullable=True)
     
     # Event data
-    resource_type = Column(String, nullable=True)  # e.g., "query", "file", "user"
-    resource_id = Column(String, nullable=True, index=True)
-    action = Column(String, nullable=False)  # e.g., "create", "read", "update", "delete"
+    resource_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    resource_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    action: Mapped[str] = mapped_column(String, nullable=False)
     
     # Details
-    description = Column(Text, nullable=False)
-    details = Column(JSON, default=dict)  # Additional event-specific data
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=True)
     
     # Request/Response info
-    request_path = Column(String, nullable=True)
-    request_method = Column(String, nullable=True)
-    response_status = Column(Integer, nullable=True)
+    request_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    request_method: Mapped[str | None] = mapped_column(String, nullable=True)
+    response_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
     
     # Timing
-    duration_ms = Column(Integer, nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     
     # Data integrity
-    data_hash = Column(String, nullable=False)  # Hash of event data for integrity
+    data_hash: Mapped[str] = mapped_column(String, nullable=False)
     
     # Compliance flags
-    contains_pii = Column(Boolean, default=False)
-    requires_retention = Column(Boolean, default=True)
-    compliance_tags = Column(JSON, default=list)
+    contains_pii: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    requires_retention: Mapped[bool] = mapped_column(Boolean, default=True, nullable=True)
+    compliance_tags: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=True)
     
     # Relationships
-    user = relationship("User", back_populates="audit_logs")
-    tenant = relationship("Tenant", back_populates="audit_logs")
+    user: Mapped[User | None] = relationship("User", back_populates="audit_logs")
+    tenant: Mapped[Tenant | None] = relationship("Tenant", back_populates="audit_logs")
     
     def to_dict(self) -> dict:
         return {
@@ -103,32 +121,36 @@ class AuditLog(Base, UUIDMixin, TimestampMixin, TenantMixin):
 class APIKey(Base, UUIDMixin, TimestampMixin, TenantMixin):
     __tablename__ = "api_keys"
     
-    name = Column(String, nullable=False)
-    key_hash = Column(String, unique=True, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    key_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
     
-    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False, index=True)
     
     # Permissions and limits
-    permissions = Column(JSON, default=list)
-    rate_limit_per_hour = Column(Integer, default=1000)
+    permissions: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=True)
+    rate_limit_per_hour: Mapped[int] = mapped_column(Integer, default=1000, nullable=True)
     
     # Status
-    is_active = Column(Boolean, default=True)
-    last_used_at = Column(DateTime(timezone=True), nullable=True)
-    usage_count = Column(Integer, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    usage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
     
     # Security
-    allowed_ip_ranges = Column(JSON, default=list)
-    expires_at = Column(DateTime(timezone=True), nullable=True)
+    allowed_ip_ranges: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     
     # Relationships
-    user = relationship("User", back_populates="api_keys")
-    tenant = relationship("Tenant", back_populates="api_keys")
+    user: Mapped[User] = relationship("User", back_populates="api_keys")
+    tenant: Mapped[Tenant | None] = relationship("Tenant", back_populates="api_keys")
     
     def is_expired(self) -> bool:
         if not self.expires_at:
             return False
-        return datetime.utcnow() > self.expires_at
+        expires_at = self.expires_at
+        if expires_at.tzinfo is None:
+            # SQLite returns naive values for timezone columns; they store UTC.
+            expires_at = expires_at.replace(tzinfo=UTC)
+        return datetime.now(UTC) > expires_at
     
     def can_access_ip(self, ip_address: str) -> bool:
         if not self.allowed_ip_ranges:

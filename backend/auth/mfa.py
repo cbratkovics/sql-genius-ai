@@ -1,16 +1,19 @@
+import base64
+import hashlib
+import io
+import json
+import logging
+import secrets
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from enum import Enum
+from typing import Any
+
 import pyotp
 import qrcode
-import io
-import base64
-from typing import Dict, Optional, List
 import redis.asyncio as redis
-import json
-import secrets
-import hashlib
-import logging
-from datetime import datetime, timedelta
-from dataclasses import dataclass
-from enum import Enum
+from qrcode.image.pil import PilImage
+
 from backend.core.config import settings
 from backend.services.email import email_service
 
@@ -37,7 +40,7 @@ class MFAChallenge:
     challenge_id: str
     user_id: str
     method: MFAMethod
-    challenge_data: Dict
+    challenge_data: dict
     expires_at: datetime
     attempts: int = 0
     max_attempts: int = 3
@@ -53,7 +56,7 @@ class MultiFactorAuthService:
         self.rate_limit_window = 900  # 15 minutes
         self.max_attempts_per_window = 5
         
-    async def setup_totp(self, user_id: str, user_email: str) -> Dict[str, str]:
+    async def setup_totp(self, user_id: str, user_email: str) -> dict[str, str | list[str]]:
         """Setup TOTP for a user"""
         try:
             # Generate secret
@@ -71,7 +74,7 @@ class MultiFactorAuthService:
             qr.add_data(provisioning_uri)
             qr.make(fit=True)
             
-            img = qr.make_image(fill_color="black", back_color="white")
+            img = qr.make_image(image_factory=PilImage, fill_color="black", back_color="white")
             img_buffer = io.BytesIO()
             img.save(img_buffer, format='PNG')
             img_buffer.seek(0)
@@ -84,7 +87,7 @@ class MultiFactorAuthService:
                 600,  # 10 minutes
                 json.dumps({
                     "secret": secret,
-                    "created_at": datetime.utcnow().isoformat()
+                    "created_at": datetime.now(UTC).replace(tzinfo=None).isoformat()
                 })
             )
             
@@ -95,9 +98,9 @@ class MultiFactorAuthService:
                 "backup_codes": await self._generate_backup_codes(user_id)
             }
             
-        except Exception as e:
-            logger.error(f"TOTP setup failed for user {user_id}: {e}")
-            raise Exception("Failed to setup TOTP")
+        except Exception as error:
+            logger.exception(f"TOTP setup failed for user {user_id}")
+            raise RuntimeError("Failed to setup TOTP") from error
     
     async def verify_totp_setup(self, user_id: str, token: str) -> bool:
         """Verify TOTP setup and activate MFA"""
@@ -127,15 +130,15 @@ class MultiFactorAuthService:
             logger.info(f"TOTP activated for user {user_id}")
             return True
             
-        except Exception as e:
-            logger.error(f"TOTP verification failed for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"TOTP verification failed for user {user_id}")
             return False
     
     async def create_mfa_challenge(
         self, 
         user_id: str, 
-        preferred_method: Optional[MFAMethod] = None
-    ) -> Optional[MFAChallenge]:
+        preferred_method: MFAMethod | None = None
+    ) -> MFAChallenge | None:
         """Create MFA challenge for user"""
         try:
             # Check rate limiting
@@ -177,7 +180,7 @@ class MultiFactorAuthService:
                 user_id=user_id,
                 method=method,
                 challenge_data=challenge_data,
-                expires_at=datetime.utcnow() + timedelta(seconds=self.challenge_timeout)
+                expires_at=datetime.now(UTC).replace(tzinfo=None) + timedelta(seconds=self.challenge_timeout)
             )
             
             # Store challenge
@@ -195,8 +198,8 @@ class MultiFactorAuthService:
             
             return challenge
             
-        except Exception as e:
-            logger.error(f"Failed to create MFA challenge for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to create MFA challenge for user {user_id}")
             return None
     
     async def verify_mfa_challenge(self, challenge_id: str, response: str) -> bool:
@@ -213,7 +216,7 @@ class MultiFactorAuthService:
             
             # Check expiration
             expires_at = datetime.fromisoformat(challenge["expires_at"])
-            if datetime.utcnow() > expires_at:
+            if datetime.now(UTC).replace(tzinfo=None) > expires_at:
                 await self.redis_client.delete(f"mfa:challenge:{challenge_id}")
                 return False
             
@@ -255,8 +258,8 @@ class MultiFactorAuthService:
                 await self._log_mfa_event(user_id, method, "failed")
                 return False
                 
-        except Exception as e:
-            logger.error(f"MFA verification failed for challenge {challenge_id}: {e}")
+        except Exception:
+            logger.exception(f"MFA verification failed for challenge {challenge_id}")
             return False
     
     async def _verify_totp(self, user_id: str, token: str) -> bool:
@@ -275,8 +278,8 @@ class MultiFactorAuthService:
             
             return totp.verify(token, valid_window=1)
             
-        except Exception as e:
-            logger.error(f"TOTP verification failed for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"TOTP verification failed for user {user_id}")
             return False
     
     async def _verify_backup_code(self, user_id: str, code: str) -> bool:
@@ -292,7 +295,7 @@ class MultiFactorAuthService:
             if code_hash in codes["codes"] and not codes["codes"][code_hash]["used"]:
                 # Mark code as used
                 codes["codes"][code_hash]["used"] = True
-                codes["codes"][code_hash]["used_at"] = datetime.utcnow().isoformat()
+                codes["codes"][code_hash]["used_at"] = datetime.now(UTC).replace(tzinfo=None).isoformat()
                 
                 # Update stored codes
                 await self.redis_client.set(
@@ -304,11 +307,11 @@ class MultiFactorAuthService:
             
             return False
             
-        except Exception as e:
-            logger.error(f"Backup code verification failed for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Backup code verification failed for user {user_id}")
             return False
     
-    async def get_user_mfa_methods(self, user_id: str) -> List[MFAMethod]:
+    async def get_user_mfa_methods(self, user_id: str) -> list[MFAMethod]:
         """Get enabled MFA methods for user"""
         try:
             methods = []
@@ -331,15 +334,15 @@ class MultiFactorAuthService:
             
             return methods
             
-        except Exception as e:
-            logger.error(f"Failed to get MFA methods for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to get MFA methods for user {user_id}")
             return []
     
-    async def _generate_backup_codes(self, user_id: str) -> List[str]:
+    async def _generate_backup_codes(self, user_id: str) -> list[str]:
         """Generate backup codes for user"""
         try:
             codes = []
-            codes_data = {"codes": {}, "created_at": datetime.utcnow().isoformat()}
+            codes_data: dict[str, Any] = {"codes": {}, "created_at": datetime.now(UTC).replace(tzinfo=None).isoformat()}
             
             for _ in range(self.backup_codes_count):
                 code = self._generate_backup_code()
@@ -348,7 +351,7 @@ class MultiFactorAuthService:
                 code_hash = hashlib.sha256(code.encode()).hexdigest()
                 codes_data["codes"][code_hash] = {
                     "used": False,
-                    "created_at": datetime.utcnow().isoformat()
+                    "created_at": datetime.now(UTC).replace(tzinfo=None).isoformat()
                 }
             
             # Store backup codes
@@ -359,8 +362,8 @@ class MultiFactorAuthService:
             
             return codes
             
-        except Exception as e:
-            logger.error(f"Failed to generate backup codes for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to generate backup codes for user {user_id}")
             return []
     
     def _generate_backup_code(self) -> str:
@@ -387,8 +390,8 @@ class MultiFactorAuthService:
             
             await email_service.send_email(user_email, subject, html_content)
             
-        except Exception as e:
-            logger.error(f"Failed to send email challenge: {e}")
+        except Exception:
+            logger.exception("Failed to send email challenge")
     
     async def _check_rate_limit(self, user_id: str) -> bool:
         """Check MFA rate limiting"""
@@ -407,23 +410,23 @@ class MultiFactorAuthService:
             await self.redis_client.incr(key)
             return True
             
-        except Exception as e:
-            logger.error(f"Rate limit check failed for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Rate limit check failed for user {user_id}")
             return False
     
-    async def _store_mfa_method(self, user_id: str, method: MFAMethod, data: Dict):
+    async def _store_mfa_method(self, user_id: str, method: MFAMethod, data: dict):
         """Store MFA method configuration"""
         try:
             await self.redis_client.set(
                 f"mfa:method:{user_id}:{method.value}",
                 json.dumps({
                     **data,
-                    "created_at": datetime.utcnow().isoformat(),
-                    "updated_at": datetime.utcnow().isoformat()
+                    "created_at": datetime.now(UTC).replace(tzinfo=None).isoformat(),
+                    "updated_at": datetime.now(UTC).replace(tzinfo=None).isoformat()
                 })
             )
-        except Exception as e:
-            logger.error(f"Failed to store MFA method {method} for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to store MFA method {method} for user {user_id}")
     
     async def _log_mfa_event(self, user_id: str, method: MFAMethod, result: str):
         """Log MFA event for auditing"""
@@ -432,7 +435,7 @@ class MultiFactorAuthService:
                 "user_id": user_id,
                 "method": method.value,
                 "result": result,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).replace(tzinfo=None).isoformat(),
                 "ip_address": None  # Would get from request context
             }
             
@@ -445,8 +448,8 @@ class MultiFactorAuthService:
             # Keep only last 100 events
             await self.redis_client.ltrim(f"mfa:audit:{user_id}", 0, 99)
             
-        except Exception as e:
-            logger.error(f"Failed to log MFA event: {e}")
+        except Exception:
+            logger.exception("Failed to log MFA event")
     
     async def disable_mfa(self, user_id: str, method: MFAMethod) -> bool:
         """Disable specific MFA method"""
@@ -459,11 +462,11 @@ class MultiFactorAuthService:
             logger.info(f"MFA method {method} disabled for user {user_id}")
             return True
             
-        except Exception as e:
-            logger.error(f"Failed to disable MFA method {method} for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to disable MFA method {method} for user {user_id}")
             return False
     
-    async def get_mfa_status(self, user_id: str) -> Dict[str, any]:
+    async def get_mfa_status(self, user_id: str) -> dict[str, Any]:
         """Get MFA status for user"""
         try:
             methods = await self.get_user_mfa_methods(user_id)
@@ -474,8 +477,8 @@ class MultiFactorAuthService:
                 "backup_codes_available": MFAMethod.BACKUP_CODES in methods
             }
             
-        except Exception as e:
-            logger.error(f"Failed to get MFA status for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to get MFA status for user {user_id}")
             return {"enabled": False, "methods": [], "backup_codes_available": False}
 
 

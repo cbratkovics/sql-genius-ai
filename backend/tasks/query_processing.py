@@ -1,23 +1,25 @@
-from backend.core.celery_app import celery_app
-from backend.core.database import AsyncSessionLocal
-from backend.core.config import settings
-from backend.models.query import Query, QueryStatus
-from backend.models.file import File
-from backend.services.sql_generation import sql_generation_engine
-from backend.services.business_intelligence import business_intelligence_engine
-from backend.services.security import security_service
-from backend.services.cache import cache_service
-import pandas as pd
 import asyncio
 import logging
-from typing import Dict, Any, List
 import traceback
+from typing import Any
+
+import pandas as pd
+
+from backend.core.celery_app import celery_app
+from backend.core.config import settings
+from backend.core.database import AsyncSessionLocal
+from backend.models.file import File
+from backend.models.query import Query, QueryStatus
+from backend.services.business_intelligence import business_intelligence_engine
+from backend.services.cache import cache_service
+from backend.services.security import security_service
+from backend.services.sql_generation import sql_generation_engine
 
 logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True, name="backend.tasks.query_processing.process_standard_query")
-def process_standard_query(self, query_id: str, user_id: str, tenant_id: str) -> Dict[str, Any]:
+def process_standard_query(self, query_id: str, user_id: str, tenant_id: str) -> dict[str, Any]:
     """Process a standard SQL query asynchronously"""
     try:
         # Update task progress
@@ -26,8 +28,8 @@ def process_standard_query(self, query_id: str, user_id: str, tenant_id: str) ->
         return asyncio.run(_process_query_async(self, query_id, user_id, tenant_id, priority="standard"))
         
     except Exception as e:
-        logger.error(f"Query processing failed for {query_id}: {e}")
-        logger.error(traceback.format_exc())
+        logger.exception(f"Query processing failed for {query_id}")
+        logger.exception(traceback.format_exc())
         
         # Update query status in database
         asyncio.run(_update_query_status(query_id, QueryStatus.FAILED, str(e)))
@@ -36,7 +38,7 @@ def process_standard_query(self, query_id: str, user_id: str, tenant_id: str) ->
 
 
 @celery_app.task(bind=True, name="backend.tasks.query_processing.process_urgent_query")  
-def process_urgent_query(self, query_id: str, user_id: str, tenant_id: str) -> Dict[str, Any]:
+def process_urgent_query(self, query_id: str, user_id: str, tenant_id: str) -> dict[str, Any]:
     """Process an urgent SQL query with high priority"""
     try:
         self.update_state(state="PROCESSING", meta={"progress": 10, "status": "Starting urgent query processing"})
@@ -44,7 +46,7 @@ def process_urgent_query(self, query_id: str, user_id: str, tenant_id: str) -> D
         return asyncio.run(_process_query_async(self, query_id, user_id, tenant_id, priority="urgent"))
         
     except Exception as e:
-        logger.error(f"Urgent query processing failed for {query_id}: {e}")
+        logger.exception(f"Urgent query processing failed for {query_id}")
         asyncio.run(_update_query_status(query_id, QueryStatus.FAILED, str(e)))
         
         raise self.retry(exc=e, countdown=30, max_retries=1)
@@ -57,7 +59,7 @@ def process_complex_analysis(
     user_id: str, 
     tenant_id: str,
     analysis_type: str = "full"
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Process complex data analysis with AI insights"""
     try:
         self.update_state(state="PROCESSING", meta={"progress": 5, "status": "Starting complex analysis"})
@@ -67,7 +69,7 @@ def process_complex_analysis(
         ))
         
     except Exception as e:
-        logger.error(f"Complex analysis failed for {query_id}: {e}")
+        logger.exception(f"Complex analysis failed for {query_id}")
         asyncio.run(_update_query_status(query_id, QueryStatus.FAILED, str(e)))
         
         raise self.retry(exc=e, countdown=120, max_retries=2)
@@ -79,14 +81,14 @@ async def _process_query_async(
     user_id: str, 
     tenant_id: str, 
     priority: str = "standard"
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Internal async query processing function"""
     async with AsyncSessionLocal() as db:
         try:
             # Fetch query from database
             query = await db.get(Query, query_id)
             if not query:
-                raise Exception(f"Query {query_id} not found")
+                raise RuntimeError(f"Query {query_id} not found")
             
             # Update progress
             task.update_state(state="PROCESSING", meta={"progress": 20, "status": "Loading data"})
@@ -98,6 +100,8 @@ async def _process_query_async(
             if query.file_id:
                 file = await db.get(File, query.file_id)
                 if file and file.status.value == "ready":
+                    if file.storage_path is None:
+                        raise RuntimeError("Ready file has no configured storage path")
                     # Load file data (in production, this would be from S3 or similar)
                     file_data = pd.read_csv(file.storage_path)  # Simplified
                     schema_info = await sql_generation_engine.infer_schema_from_csv(file_data)
@@ -108,7 +112,7 @@ async def _process_query_async(
             # Generate SQL
             if not query.generated_sql:
                 if not schema_info:
-                    raise Exception("No schema information available for SQL generation")
+                    raise RuntimeError("No schema information available for SQL generation")
                 
                 generated_sql, metadata = await sql_generation_engine.generate_sql(
                     query.natural_language_query,
@@ -164,6 +168,7 @@ async def _process_query_async(
                     )
                     query.insights = insights
                 except Exception as e:
+                    logger.exception("Optional integration operation failed")
                     logger.warning(f"Insight generation failed: {e}")
                     query.insights = {"error": "Insight generation failed"}
             
@@ -194,13 +199,14 @@ async def _process_query_async(
             }
             
         except Exception as e:
+            logger.exception("Optional integration operation failed")
             # Update query status to failed
-            if 'query' in locals():
+            if 'query' in locals() and query is not None:
                 query.status = QueryStatus.FAILED
                 query.error_message = str(e)
                 await db.commit()
             
-            raise e
+            raise
 
 
 async def _process_complex_analysis_async(
@@ -209,14 +215,14 @@ async def _process_complex_analysis_async(
     user_id: str, 
     tenant_id: str,
     analysis_type: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Internal async complex analysis processing function"""
     async with AsyncSessionLocal() as db:
         try:
             # Fetch query and associated data
             query = await db.get(Query, query_id)
             if not query:
-                raise Exception(f"Query {query_id} not found")
+                raise RuntimeError(f"Query {query_id} not found")
             
             # Update progress
             task.update_state(state="PROCESSING", meta={"progress": 10, "status": "Loading data for analysis"})
@@ -227,9 +233,9 @@ async def _process_complex_analysis_async(
                 if cached_data:
                     result_data = pd.DataFrame(cached_data)
                 else:
-                    raise Exception("Result data not found in cache")
+                    raise RuntimeError("Result data not found in cache")
             else:
-                raise Exception("No result data available for analysis")
+                raise RuntimeError("No result data available for analysis")
             
             # Update progress
             task.update_state(state="PROCESSING", meta={"progress": 30, "status": "Performing trend analysis"})
@@ -300,12 +306,12 @@ async def _process_complex_analysis_async(
                 "has_pii": len(pii_findings) > 0
             }
             
-        except Exception as e:
-            logger.error(f"Complex analysis failed: {e}")
-            raise e
+        except Exception:
+            logger.exception("Complex analysis failed")
+            raise
 
 
-def _generate_visualization_suggestions(data: pd.DataFrame) -> List[Dict[str, Any]]:
+def _generate_visualization_suggestions(data: pd.DataFrame) -> list[dict[str, Any]]:
     """Generate visualization suggestions based on data characteristics"""
     suggestions = []
     
@@ -350,7 +356,7 @@ def _generate_visualization_suggestions(data: pd.DataFrame) -> List[Dict[str, An
     return suggestions
 
 
-async def _update_query_status(query_id: str, status: QueryStatus, error_message: str = None):
+async def _update_query_status(query_id: str, status: QueryStatus, error_message: str | None = None):
     """Update query status in database"""
     async with AsyncSessionLocal() as db:
         try:
@@ -360,5 +366,5 @@ async def _update_query_status(query_id: str, status: QueryStatus, error_message
                 if error_message:
                     query.error_message = error_message
                 await db.commit()
-        except Exception as e:
-            logger.error(f"Failed to update query status: {e}")
+        except Exception:
+            logger.exception("Failed to update query status")

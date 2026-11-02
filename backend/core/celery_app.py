@@ -1,7 +1,9 @@
+import logging
+
 from celery import Celery
 from kombu import Queue
+
 from backend.core.config import settings
-import logging
 
 logger = logging.getLogger(__name__)
 

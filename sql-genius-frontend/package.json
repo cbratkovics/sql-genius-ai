@@ -3,24 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
-    "start": "next start",
     "lint": "eslint",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "prepare:sql-wasm": "node scripts/prepare-sql-wasm.mjs",
     "predev": "npm run prepare:sql-wasm",
     "prebuild": "npm run prepare:sql-wasm",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "preview": "node scripts/preview-static.mjs",
+    "test:static": "playwright test"
   },
   "dependencies": {
-    "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
-    "@tanstack/react-query": "^5.87.1",
-    "@tanstack/react-query-devtools": "^5.87.3",
-    "@vercel/analytics": "^1.5.0",
-    "axios": "^1.11.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.543.0",
@@ -35,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -45,6 +42,6 @@
     "typescript": "^5"
   },
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   }
 }

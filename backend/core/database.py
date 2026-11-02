@@ -1,18 +1,20 @@
+import asyncio
 import logging
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool, QueuePool
+from collections.abc import AsyncGenerator
+
+from sqlalchemy import select, text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
+
 from backend.core.config import settings
 from backend.models.base import Base
-from typing import AsyncGenerator
-import asyncio
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
-def transform_database_url(url: str) -> str:
+def transform_database_url(url: str | None) -> str:
     """
     Transform database URL to use async drivers.
     
@@ -62,7 +64,6 @@ else:
         database_url,
         echo=settings.ENVIRONMENT == "development",
         # Connection pool settings for production
-        poolclass=QueuePool,
         pool_size=20,  # Number of persistent connections
         max_overflow=10,  # Maximum overflow connections
         pool_timeout=30,  # Timeout for getting connection from pool
@@ -77,9 +78,8 @@ else:
     )
 
 # Create async session factory
-AsyncSessionLocal = sessionmaker(
+AsyncSessionLocal = async_sessionmaker(
     engine,
-    class_=AsyncSession,
     expire_on_commit=False,
     autocommit=False,
     autoflush=False,
@@ -91,21 +91,25 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     Dependency to get database session.
     Includes retry logic for connection failures.
     """
-    retry_count = 0
-    max_retries = 3
-    
-    while retry_count < max_retries:
+    # Retry acquiring a connection only. Once yielded, application errors must
+    # propagate instead of causing a second yield from a dependency generator.
+    for attempt in range(3):
+        session = AsyncSessionLocal()
         try:
-            async with AsyncSessionLocal() as session:
-                yield session
-                break
-        except Exception as e:
-            retry_count += 1
-            if retry_count >= max_retries:
-                logger.error(f"Failed to get database session after {max_retries} retries: {e}")
+            await session.connection()
+        except SQLAlchemyError:
+            await session.close()
+            if attempt == 2:
+                logger.exception("Database connection failed after three attempts")
                 raise
-            logger.warning(f"Database connection attempt {retry_count} failed, retrying...")
-            await asyncio.sleep(1 * retry_count)  # Exponential backoff
+            logger.warning("Database connection failed; retrying")
+            await asyncio.sleep(attempt + 1)
+        else:
+            try:
+                yield session
+            finally:
+                await session.close()
+            return
 
 
 async def create_tables():
@@ -140,22 +144,22 @@ async def check_database_connection():
             await conn.execute(text("SELECT 1"))
         logger.info("Database connection successful")
         return True
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
+    except SQLAlchemyError:
+        logger.exception("Database connection failed")
         return False
 
 
 class TenantAwareSession:
-    """Wrapper for tenant-aware database operations."""
+    """Build tenant-scoped statements for an asynchronous session."""
     
     def __init__(self, session: AsyncSession, tenant_id: str):
         self.session = session
         self.tenant_id = tenant_id
     
     def query(self, model):
-        base_query = self.session.query(model)
+        base_query = select(model)
         if hasattr(model, 'tenant_id'):
-            return base_query.filter(model.tenant_id == self.tenant_id)
+            return base_query.where(model.tenant_id == self.tenant_id)
         return base_query
     
     async def add(self, obj):

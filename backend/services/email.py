@@ -1,12 +1,13 @@
-import aiosmtplib
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import Optional
+from email.mime.text import MIMEText
+
+import aiosmtplib
+
 from backend.core.config import settings
 
 
 class EmailService:
-    def __init__(self):
+    def __init__(self) -> None:
         self.smtp_host = settings.SMTP_HOST
         self.smtp_port = settings.SMTP_PORT
         self.smtp_user = settings.SMTP_USER
@@ -19,8 +20,11 @@ class EmailService:
         to_email: str,
         subject: str,
         html_content: str,
-        text_content: Optional[str] = None
+        text_content: str | None = None
     ) -> bool:
+        if not self.smtp_host or not self.from_email:
+            return False
+
         try:
             message = MIMEMultipart("alternative")
             message["Subject"] = subject
@@ -43,7 +47,7 @@ class EmailService:
                 password=self.smtp_password,
             )
             return True
-        except Exception as e:
+        except (aiosmtplib.SMTPException, OSError, ValueError) as e:
             print(f"Failed to send email: {e}")
             return False
     

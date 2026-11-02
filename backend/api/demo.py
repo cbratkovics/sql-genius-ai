@@ -2,7 +2,7 @@
 
 import json
 import time
-from typing import Any, Dict, List, Literal, Optional
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -22,7 +22,7 @@ class RateLimiter:
     def __init__(self, max_requests: int = 10, window_seconds: int = 60):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
-        self.requests: Dict[str, List[float]] = {}
+        self.requests: dict[str, list[float]] = {}
 
     async def check(self, key: str) -> bool:
         now = time.monotonic()
@@ -45,7 +45,7 @@ class SchemaColumn(BaseModel):
 
 class SchemaTable(BaseModel):
     name: str = Field(..., min_length=1, max_length=80)
-    columns: List[SchemaColumn] = Field(..., min_length=1, max_length=50)
+    columns: list[SchemaColumn] = Field(..., min_length=1, max_length=50)
 
 
 class SchemaRelationship(BaseModel):
@@ -56,13 +56,13 @@ class SchemaRelationship(BaseModel):
 class SchemaContext(BaseModel):
     id: str = Field(..., min_length=1, max_length=80)
     dialect: Literal["sqlite"]
-    tables: List[SchemaTable] = Field(..., min_length=1, max_length=20)
-    relationships: List[SchemaRelationship] = Field(default_factory=list, max_length=50)
+    tables: list[SchemaTable] = Field(..., min_length=1, max_length=20)
+    relationships: list[SchemaRelationship] = Field(default_factory=list, max_length=50)
 
 
 class DemoSQLRequest(BaseModel):
     query: str = Field(..., min_length=5, max_length=500)
-    schema: SchemaContext
+    schema_context: SchemaContext = Field(alias="schema")
 
 
 class GenerationMetadata(BaseModel):
@@ -75,19 +75,19 @@ class GenerationMetadata(BaseModel):
     policy_status: Literal["not_checked"] = "not_checked"
     execution_status: Literal["not_run"] = "not_run"
     provider_round_trip_ms: float
-    input_tokens: Optional[int] = None
-    output_tokens: Optional[int] = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
 
 class DemoSQLResponse(BaseModel):
     success: Literal[True] = True
     sql: str
     explanation: str
-    assumptions: List[str]
+    assumptions: list[str]
     metadata: GenerationMetadata
 
 
-def _parse_provider_json(text: str) -> Dict[str, Any]:
+def _parse_provider_json(text: str) -> dict[str, Any]:
     candidate = text.strip()
     if candidate.startswith("```"):
         lines = candidate.splitlines()
@@ -116,7 +116,7 @@ async def demo_sql_generation(request: DemoSQLRequest, req: Request):
     if not await demo_limiter.check(client_key):
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
 
-    schema_json = request.schema.model_dump_json()
+    schema_json = request.schema_context.model_dump_json()
     prompt = (
         "Return only one JSON object with string keys sql and explanation and an array of "
         "string assumptions. Generate one read-only SQLite SELECT statement (a read-only CTE "
@@ -145,7 +145,7 @@ async def demo_sql_generation(request: DemoSQLRequest, req: Request):
             provider=completion.provider,
             model=completion.model,
             dialect="sqlite",
-            schema_id=request.schema.id,
+            schema_id=request.schema_context.id,
             response_parsed=True,
             provider_round_trip_ms=round((time.monotonic() - started) * 1000, 2),
             input_tokens=completion.input_tokens,
@@ -159,7 +159,7 @@ class CompatibilityExecutionRequest(BaseModel):
 
 
 @router.post("/execute-sandbox", deprecated=True)
-async def execute_fixture_response(payload: CompatibilityExecutionRequest = Body(...)):
+async def execute_fixture_response(payload: Annotated[CompatibilityExecutionRequest, Body()]):
     """Compatibility route: it deliberately does not execute caller SQL."""
     return {
         "success": False,

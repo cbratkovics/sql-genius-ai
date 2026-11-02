@@ -1,7 +1,6 @@
 """Small, explicit wrapper around the optional Anthropic integration."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 from anthropic import AsyncAnthropic
 
@@ -21,8 +20,8 @@ class CompletionResult:
     text: str
     provider: str
     model: str
-    input_tokens: Optional[int]
-    output_tokens: Optional[int]
+    input_tokens: int | None
+    output_tokens: int | None
 
 
 class AnthropicService:
@@ -41,7 +40,7 @@ class AnthropicService:
         prompt: str,
         max_tokens: int = 500,
         temperature: float = 0.2,
-        model: Optional[str] = None,
+        model: str | None = None,
     ) -> CompletionResult:
         if not self.client:
             raise ProviderNotConfiguredError(
@@ -50,7 +49,7 @@ class AnthropicService:
             )
 
         requested_model = model or settings.ANTHROPIC_MODEL
-        response = await self.client.messages.create(
+        response = await self.client.beta.messages.create(
             model=requested_model,
             max_tokens=min(max_tokens, settings.ANTHROPIC_MAX_OUTPUT_TOKENS),
             temperature=temperature,

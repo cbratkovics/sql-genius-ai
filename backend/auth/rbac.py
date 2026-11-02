@@ -1,10 +1,12 @@
-from typing import Dict, List, Set, Optional, Any
-from enum import Enum
-from dataclasses import dataclass, field
-import redis.asyncio as redis
 import json
 import logging
-from datetime import datetime
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import Enum
+from typing import Any
+
+import redis.asyncio as redis
+
 from backend.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -43,8 +45,8 @@ class Permission:
     resource_type: ResourceType
     action: Action
     effect: Effect = Effect.ALLOW
-    conditions: Dict[str, Any] = field(default_factory=dict)
-    resource_ids: Optional[List[str]] = None
+    conditions: dict[str, Any] = field(default_factory=dict)
+    resource_ids: list[str] | None = None
     
     def __str__(self) -> str:
         resource_part = f"{self.resource_type.value}"
@@ -58,12 +60,12 @@ class Role:
     """Role with permissions and metadata"""
     name: str
     description: str
-    permissions: List[Permission] = field(default_factory=list)
-    inherits_from: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    permissions: list[Permission] = field(default_factory=list)
+    inherits_from: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
     is_system_role: bool = False
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class RBACService:
@@ -79,7 +81,7 @@ class RBACService:
         await self._create_system_roles()
         logger.info("RBAC service initialized")
     
-    def _define_system_roles(self) -> Dict[str, Role]:
+    def _define_system_roles(self) -> dict[str, Role]:
         """Define system-level roles"""
         return {
             "super_admin": Role(
@@ -166,16 +168,16 @@ class RBACService:
     
     async def _create_system_roles(self):
         """Create system roles in Redis"""
-        for role_name, role in self.system_roles.items():
+        for role in self.system_roles.values():
             await self._store_role(role)
     
     async def create_role(
         self,
         name: str,
         description: str,
-        permissions: List[Permission] = None,
-        inherits_from: List[str] = None,
-        metadata: Dict[str, Any] = None
+        permissions: list[Permission] | None = None,
+        inherits_from: list[str] | None = None,
+        metadata: dict[str, Any] | None = None
     ) -> Role:
         """Create a custom role"""
         try:
@@ -190,19 +192,19 @@ class RBACService:
                 permissions=permissions or [],
                 inherits_from=inherits_from or [],
                 metadata=metadata or {},
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(UTC).replace(tzinfo=None),
+                updated_at=datetime.now(UTC).replace(tzinfo=None)
             )
             
             await self._store_role(role)
             logger.info(f"Created role: {name}")
             return role
             
-        except Exception as e:
-            logger.error(f"Failed to create role {name}: {e}")
+        except Exception:
+            logger.exception(f"Failed to create role {name}")
             raise
     
-    async def get_role(self, role_name: str) -> Optional[Role]:
+    async def get_role(self, role_name: str) -> Role | None:
         """Get role by name"""
         try:
             role_data = await self.redis_client.get(f"rbac:role:{role_name}")
@@ -212,11 +214,11 @@ class RBACService:
             data = json.loads(role_data)
             return self._deserialize_role(data)
             
-        except Exception as e:
-            logger.error(f"Failed to get role {role_name}: {e}")
+        except Exception:
+            logger.exception(f"Failed to get role {role_name}")
             return None
     
-    async def update_role(self, role_name: str, **updates) -> Optional[Role]:
+    async def update_role(self, role_name: str, **updates) -> Role | None:
         """Update role"""
         try:
             role = await self.get_role(role_name)
@@ -231,7 +233,7 @@ class RBACService:
                 if hasattr(role, field):
                     setattr(role, field, value)
             
-            role.updated_at = datetime.utcnow()
+            role.updated_at = datetime.now(UTC).replace(tzinfo=None)
             await self._store_role(role)
             
             # Invalidate user permission caches
@@ -240,8 +242,8 @@ class RBACService:
             logger.info(f"Updated role: {role_name}")
             return role
             
-        except Exception as e:
-            logger.error(f"Failed to update role {role_name}: {e}")
+        except Exception:
+            logger.exception(f"Failed to update role {role_name}")
             raise
     
     async def delete_role(self, role_name: str) -> bool:
@@ -263,11 +265,11 @@ class RBACService:
             logger.info(f"Deleted role: {role_name}")
             return True
             
-        except Exception as e:
-            logger.error(f"Failed to delete role {role_name}: {e}")
+        except Exception:
+            logger.exception(f"Failed to delete role {role_name}")
             raise
     
-    async def assign_role_to_user(self, user_id: str, role_name: str, tenant_id: str = None):
+    async def assign_role_to_user(self, user_id: str, role_name: str, tenant_id: str | None = None):
         """Assign role to user"""
         try:
             # Verify role exists
@@ -282,7 +284,7 @@ class RBACService:
             assignment = {
                 "role": role_name,
                 "tenant_id": tenant_id,
-                "assigned_at": datetime.utcnow().isoformat(),
+                "assigned_at": datetime.now(UTC).replace(tzinfo=None).isoformat(),
                 "assigned_by": None  # Would get from context
             }
             
@@ -299,11 +301,11 @@ class RBACService:
             
             logger.info(f"Assigned role {role_name} to user {user_id}")
             
-        except Exception as e:
-            logger.error(f"Failed to assign role {role_name} to user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to assign role {role_name} to user {user_id}")
             raise
     
-    async def revoke_role_from_user(self, user_id: str, role_name: str, tenant_id: str = None):
+    async def revoke_role_from_user(self, user_id: str, role_name: str, tenant_id: str | None = None):
         """Revoke role from user"""
         try:
             user_roles = await self._get_user_roles(user_id)
@@ -325,8 +327,8 @@ class RBACService:
             
             logger.info(f"Revoked role {role_name} from user {user_id}")
             
-        except Exception as e:
-            logger.error(f"Failed to revoke role {role_name} from user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to revoke role {role_name} from user {user_id}")
             raise
     
     async def check_permission(
@@ -334,8 +336,8 @@ class RBACService:
         user_id: str,
         resource_type: ResourceType,
         action: Action,
-        resource_id: str = None,
-        context: Dict[str, Any] = None
+        resource_id: str | None = None,
+        context: dict[str, Any] | None = None
     ) -> bool:
         """Check if user has permission for action on resource"""
         try:
@@ -347,19 +349,19 @@ class RBACService:
                 permissions, resource_type, action, resource_id, context or {}
             )
             
-        except Exception as e:
-            logger.error(f"Permission check failed for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Permission check failed for user {user_id}")
             return False
     
-    async def get_user_permissions(self, user_id: str) -> List[Permission]:
+    async def get_user_permissions(self, user_id: str) -> list[Permission]:
         """Get all permissions for user"""
         try:
             return await self._get_user_permissions(user_id)
-        except Exception as e:
-            logger.error(f"Failed to get permissions for user {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to get permissions for user {user_id}")
             return []
     
-    async def _get_user_permissions(self, user_id: str) -> List[Permission]:
+    async def _get_user_permissions(self, user_id: str) -> list[Permission]:
         """Get user permissions with caching"""
         try:
             # Check cache first
@@ -372,8 +374,8 @@ class RBACService:
             user_roles = await self._get_user_roles(user_id)
             
             # Collect permissions from all roles
-            all_permissions = []
-            processed_roles = set()
+            all_permissions: list[Permission] = []
+            processed_roles: set[str] = set()
             
             for role_assignment in user_roles:
                 role_name = role_assignment["role"]
@@ -391,15 +393,15 @@ class RBACService:
             
             return all_permissions
             
-        except Exception as e:
-            logger.error(f"Failed to get user permissions for {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to get user permissions for {user_id}")
             return []
     
     async def _collect_role_permissions(
         self,
         role_name: str,
-        permissions: List[Permission],
-        processed_roles: Set[str]
+        permissions: list[Permission],
+        processed_roles: set[str]
     ):
         """Recursively collect permissions from role hierarchy"""
         if role_name in processed_roles:
@@ -420,11 +422,11 @@ class RBACService:
     
     def _evaluate_permissions(
         self,
-        permissions: List[Permission],
+        permissions: list[Permission],
         resource_type: ResourceType,
         action: Action,
-        resource_id: str = None,
-        context: Dict[str, Any] = None
+        resource_id: str | None = None,
+        context: dict[str, Any] | None = None
     ) -> bool:
         """Evaluate permissions against request"""
         context = context or {}
@@ -450,8 +452,8 @@ class RBACService:
         permission: Permission,
         resource_type: ResourceType,
         action: Action,
-        resource_id: str = None,
-        context: Dict[str, Any] = None
+        resource_id: str | None = None,
+        context: dict[str, Any] | None = None
     ) -> bool:
         """Check if permission matches the request"""
         # Check resource type
@@ -463,14 +465,13 @@ class RBACService:
             return False
         
         # Check resource IDs if specified
-        if permission.resource_ids and resource_id:
-            if resource_id not in permission.resource_ids:
-                return False
+        if permission.resource_ids and resource_id and resource_id not in permission.resource_ids:
+            return False
         
         # Evaluate conditions
-        return self._evaluate_conditions(permission.conditions, context)
+        return self._evaluate_conditions(permission.conditions, context or {})
     
-    def _evaluate_conditions(self, conditions: Dict[str, Any], context: Dict[str, Any]) -> bool:
+    def _evaluate_conditions(self, conditions: dict[str, Any], context: dict[str, Any]) -> bool:
         """Evaluate permission conditions"""
         if not conditions:
             return True
@@ -503,21 +504,20 @@ class RBACService:
                 if condition_value and not context.get("is_api_request", False):
                     return False
             
-            elif condition_key == "advanced_queries":
-                if condition_value and not context.get("has_advanced_features", False):
-                    return False
+            elif condition_key == "advanced_queries" and condition_value and not context.get("has_advanced_features", False):
+                return False
         
         return True
     
-    async def _get_user_roles(self, user_id: str) -> List[Dict[str, Any]]:
+    async def _get_user_roles(self, user_id: str) -> list[dict[str, Any]]:
         """Get user role assignments"""
         try:
             roles_data = await self.redis_client.get(f"rbac:user_roles:{user_id}")
             if roles_data:
                 return json.loads(roles_data)
             return []
-        except Exception as e:
-            logger.error(f"Failed to get user roles for {user_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to get user roles for {user_id}")
             return []
     
     async def _store_role(self, role: Role):
@@ -528,11 +528,11 @@ class RBACService:
                 f"rbac:role:{role.name}",
                 json.dumps(role_data)
             )
-        except Exception as e:
-            logger.error(f"Failed to store role {role.name}: {e}")
+        except Exception:
+            logger.exception(f"Failed to store role {role.name}")
             raise
     
-    def _serialize_role(self, role: Role) -> Dict[str, Any]:
+    def _serialize_role(self, role: Role) -> dict[str, Any]:
         """Serialize role to dict"""
         return {
             "name": role.name,
@@ -545,7 +545,7 @@ class RBACService:
             "updated_at": role.updated_at.isoformat() if role.updated_at else None
         }
     
-    def _deserialize_role(self, data: Dict[str, Any]) -> Role:
+    def _deserialize_role(self, data: dict[str, Any]) -> Role:
         """Deserialize role from dict"""
         return Role(
             name=data["name"],
@@ -558,7 +558,7 @@ class RBACService:
             updated_at=datetime.fromisoformat(data["updated_at"]) if data["updated_at"] else None
         )
     
-    def _serialize_permission(self, permission: Permission) -> Dict[str, Any]:
+    def _serialize_permission(self, permission: Permission) -> dict[str, Any]:
         """Serialize permission to dict"""
         return {
             "resource_type": permission.resource_type.value,
@@ -568,7 +568,7 @@ class RBACService:
             "resource_ids": permission.resource_ids
         }
     
-    def _deserialize_permission(self, data: Dict[str, Any]) -> Permission:
+    def _deserialize_permission(self, data: dict[str, Any]) -> Permission:
         """Deserialize permission from dict"""
         return Permission(
             resource_type=ResourceType(data["resource_type"]),
@@ -588,10 +588,10 @@ class RBACService:
             users_with_role = await self._get_users_with_role(role_name)
             for user_id in users_with_role:
                 await self._invalidate_user_cache(user_id)
-        except Exception as e:
-            logger.error(f"Failed to invalidate caches for role {role_name}: {e}")
+        except Exception:
+            logger.exception(f"Failed to invalidate caches for role {role_name}")
     
-    async def _get_users_with_role(self, role_name: str) -> List[str]:
+    async def _get_users_with_role(self, role_name: str) -> list[str]:
         """Get list of users with specific role"""
         try:
             users = []
@@ -606,8 +606,8 @@ class RBACService:
             
             return users
             
-        except Exception as e:
-            logger.error(f"Failed to get users with role {role_name}: {e}")
+        except Exception:
+            logger.exception(f"Failed to get users with role {role_name}")
             return []
 
 

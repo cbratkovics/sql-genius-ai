@@ -1,22 +1,52 @@
+from __future__ import annotations
+
 import asyncio
-import boto3
 import gzip
+import hashlib
 import json
 import logging
 import os
 import tempfile
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-import hashlib
+from typing import TYPE_CHECKING, Any
+
 import aiofiles
-from botocore.exceptions import NoCredentialsError, ClientError
+import boto3
 import redis.asyncio as redis
+from botocore.exceptions import ClientError, NoCredentialsError
+from sqlalchemy import text
+
 from backend.core.config import settings
 from backend.core.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
+
+
+if TYPE_CHECKING:
+    from mypy_boto3_s3.type_defs import BucketLifecycleConfigurationTypeDef
+
+
+def _compress_file(source: str, destination: str) -> None:
+    """Compress blocking filesystem streams outside the asynchronous event loop."""
+    with open(source, "rb") as f_in, gzip.open(destination, "wb") as f_out:
+        f_out.writelines(f_in)
+
+
+
+
+def _required_postgres_setting(value: str | None, name: str) -> str:
+    if not value:
+        raise ValueError(f"{name} must be configured before running PostgreSQL backups")
+    return value
+
+
+def _archive_wal_directory(source: str, destination: str) -> None:
+    import tarfile
+
+    with tarfile.open(destination, "w:gz") as tar:
+        tar.add(source, arcname="wal_files")
 
 
 class BackupType(str, Enum):
@@ -51,11 +81,11 @@ class BackupMetadata:
     location: str
     retention_until: datetime
     status: BackupStatus
-    database_name: str = None
-    table_names: List[str] = field(default_factory=list)
+    database_name: str | None = None
+    table_names: list[str] = field(default_factory=list)
     compression: str = "gzip"
     encryption: bool = True
-    tags: Dict[str, str] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -63,12 +93,12 @@ class RecoveryPlan:
     recovery_id: str
     recovery_type: RecoveryType
     target_timestamp: datetime
-    source_backups: List[str]
+    source_backups: list[str]
     estimated_duration: int  # seconds
     estimated_rto: int  # Recovery Time Objective in seconds
     estimated_rpo: int  # Recovery Point Objective in seconds
-    steps: List[Dict[str, Any]] = field(default_factory=list)
-    dependencies: List[str] = field(default_factory=list)
+    steps: list[dict[str, Any]] = field(default_factory=list)
+    dependencies: list[str] = field(default_factory=list)
 
 
 class DisasterRecoveryManager:
@@ -159,7 +189,7 @@ class DisasterRecoveryManager:
             )
             
             # Set lifecycle policy for automated cleanup
-            lifecycle_policy = {
+            lifecycle_policy: BucketLifecycleConfigurationTypeDef = {
                 'Rules': [
                     {
                         'ID': 'BackupRetention',
@@ -198,11 +228,11 @@ class DisasterRecoveryManager:
     async def create_database_backup(
         self,
         backup_type: BackupType = BackupType.FULL,
-        database_name: str = None,
-        tables: List[str] = None
+        database_name: str | None = None,
+        tables: list[str] | None = None
     ) -> BackupMetadata:
         """Create database backup"""
-        backup_id = f"db-{backup_type.value}-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}"
+        backup_id = f"db-{backup_type.value}-{datetime.now(UTC).replace(tzinfo=None).strftime('%Y%m%d-%H%M%S')}"
         
         try:
             logger.info(f"Starting {backup_type.value} database backup: {backup_id}")
@@ -211,11 +241,11 @@ class DisasterRecoveryManager:
             metadata = BackupMetadata(
                 backup_id=backup_id,
                 backup_type=backup_type,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC).replace(tzinfo=None),
                 size_bytes=0,
                 checksum="",
                 location="",
-                retention_until=datetime.utcnow() + timedelta(days=self.retention_policies[backup_type]),
+                retention_until=datetime.now(UTC).replace(tzinfo=None) + timedelta(days=self.retention_policies[backup_type]),
                 status=BackupStatus.IN_PROGRESS,
                 database_name=database_name,
                 table_names=tables or []
@@ -258,16 +288,16 @@ class DisasterRecoveryManager:
             logger.info(f"Database backup completed: {backup_id}")
             return metadata
             
-        except Exception as e:
-            logger.error(f"Database backup failed: {e}")
+        except Exception:
+            logger.exception("Database backup failed")
             metadata.status = BackupStatus.FAILED
             await self._store_backup_metadata(metadata)
             raise
     
     async def _create_full_database_backup(
         self,
-        database_name: str = None,
-        tables: List[str] = None
+        database_name: str | None = None,
+        tables: list[str] | None = None
     ) -> str:
         """Create full database backup using pg_dump"""
         
@@ -279,9 +309,9 @@ class DisasterRecoveryManager:
             # Build pg_dump command
             cmd = [
                 'pg_dump',
-                '--host', settings.POSTGRES_HOST,
+                '--host', _required_postgres_setting(settings.POSTGRES_HOST, 'POSTGRES_HOST'),
                 '--port', str(settings.POSTGRES_PORT),
-                '--username', settings.POSTGRES_USER,
+                '--username', _required_postgres_setting(settings.POSTGRES_USER, 'POSTGRES_USER'),
                 '--no-password',
                 '--verbose',
                 '--clean',
@@ -297,11 +327,12 @@ class DisasterRecoveryManager:
                     cmd.extend(['--table', table])
             
             # Add database name
-            cmd.append(database_name or settings.POSTGRES_DB)
+            cmd.append(_required_postgres_setting(database_name or settings.POSTGRES_DB, 'POSTGRES_DB'))
             
             # Set environment variables
             env = os.environ.copy()
-            env['PGPASSWORD'] = settings.POSTGRES_PASSWORD
+            if settings.POSTGRES_PASSWORD is not None:
+                env['PGPASSWORD'] = settings.POSTGRES_PASSWORD
             
             # Execute backup
             process = await asyncio.create_subprocess_exec(
@@ -311,29 +342,28 @@ class DisasterRecoveryManager:
                 stderr=asyncio.subprocess.PIPE
             )
             
-            stdout, stderr = await process.communicate()
+            _stdout, stderr = await process.communicate()
             
             if process.returncode != 0:
-                raise Exception(f"pg_dump failed: {stderr.decode()}")
+                raise RuntimeError(f"pg_dump failed: {stderr.decode()}")
             
             # Compress backup
             compressed_file = temp_file + '.gz'
-            with open(temp_file, 'rb') as f_in:
-                with gzip.open(compressed_file, 'wb') as f_out:
-                    f_out.writelines(f_in)
+            await asyncio.to_thread(_compress_file, temp_file, compressed_file)
             
             os.unlink(temp_file)
             return compressed_file
             
-        except Exception as e:
+        except Exception:
+            logger.exception("Optional integration operation failed")
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
-            raise e
+            raise
     
     async def _create_incremental_backup(
         self,
-        database_name: str = None,
-        tables: List[str] = None
+        database_name: str | None = None,
+        tables: list[str] | None = None
     ) -> str:
         """Create incremental backup using WAL files"""
         
@@ -354,16 +384,17 @@ class DisasterRecoveryManager:
             # Archive WAL files
             cmd = [
                 'pg_receivewal',
-                '--host', settings.POSTGRES_HOST,
+                '--host', _required_postgres_setting(settings.POSTGRES_HOST, 'POSTGRES_HOST'),
                 '--port', str(settings.POSTGRES_PORT),
-                '--username', settings.POSTGRES_USER,
+                '--username', _required_postgres_setting(settings.POSTGRES_USER, 'POSTGRES_USER'),
                 '--no-password',
                 '--directory', os.path.dirname(temp_file),
                 '--verbose'
             ]
             
             env = os.environ.copy()
-            env['PGPASSWORD'] = settings.POSTGRES_PASSWORD
+            if settings.POSTGRES_PASSWORD is not None:
+                env['PGPASSWORD'] = settings.POSTGRES_PASSWORD
             
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -379,20 +410,17 @@ class DisasterRecoveryManager:
             
             # Compress the WAL directory
             compressed_file = temp_file + '.gz'
-            with gzip.open(compressed_file, 'wb') as f_out:
-                # Archive directory contents
-                import tarfile
-                with tarfile.open(fileobj=f_out, mode='w') as tar:
-                    tar.add(os.path.dirname(temp_file), arcname='wal_files')
+            await asyncio.to_thread(_archive_wal_directory, os.path.dirname(temp_file), compressed_file)
             
             return compressed_file
             
-        except Exception as e:
+        except Exception:
+            logger.exception("Optional integration operation failed")
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
-            raise e
+            raise
     
-    async def _create_transaction_log_backup(self, database_name: str = None) -> str:
+    async def _create_transaction_log_backup(self, database_name: str | None = None) -> str:
         """Create transaction log backup"""
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.sql', delete=False) as f:
@@ -401,24 +429,25 @@ class DisasterRecoveryManager:
         try:
             # Get current WAL position
             async with AsyncSessionLocal() as db:
-                result = await db.execute("SELECT pg_current_wal_lsn()")
+                result = await db.execute(text("SELECT pg_current_wal_lsn()"))
                 result.scalar()
             
             # Create logical backup of recent transactions
             cmd = [
                 'pg_dump',
-                '--host', settings.POSTGRES_HOST,
+                '--host', _required_postgres_setting(settings.POSTGRES_HOST, 'POSTGRES_HOST'),
                 '--port', str(settings.POSTGRES_PORT),
-                '--username', settings.POSTGRES_USER,
+                '--username', _required_postgres_setting(settings.POSTGRES_USER, 'POSTGRES_USER'),
                 '--no-password',
                 '--format', 'custom',
                 '--file', temp_file,
                 '--serializable-deferrable',
-                database_name or settings.POSTGRES_DB
+                _required_postgres_setting(database_name or settings.POSTGRES_DB, 'POSTGRES_DB')
             ]
             
             env = os.environ.copy()
-            env['PGPASSWORD'] = settings.POSTGRES_PASSWORD
+            if settings.POSTGRES_PASSWORD is not None:
+                env['PGPASSWORD'] = settings.POSTGRES_PASSWORD
             
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -427,24 +456,23 @@ class DisasterRecoveryManager:
                 stderr=asyncio.subprocess.PIPE
             )
             
-            stdout, stderr = await process.communicate()
+            _stdout, stderr = await process.communicate()
             
             if process.returncode != 0:
-                raise Exception(f"Transaction log backup failed: {stderr.decode()}")
+                raise RuntimeError(f"Transaction log backup failed: {stderr.decode()}")
             
             # Compress
             compressed_file = temp_file + '.gz'
-            with open(temp_file, 'rb') as f_in:
-                with gzip.open(compressed_file, 'wb') as f_out:
-                    f_out.writelines(f_in)
+            await asyncio.to_thread(_compress_file, temp_file, compressed_file)
             
             os.unlink(temp_file)
             return compressed_file
             
-        except Exception as e:
+        except Exception:
+            logger.exception("Optional integration operation failed")
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
-            raise e
+            raise
     
     async def _upload_backup_to_s3(self, file_path: str, s3_key: str):
         """Upload backup file to S3"""
@@ -526,14 +554,14 @@ class DisasterRecoveryManager:
                 {metadata.backup_id: metadata.timestamp.timestamp()}
             )
             
-        except Exception as e:
-            logger.error(f"Failed to store backup metadata: {e}")
+        except Exception:
+            logger.exception("Failed to store backup metadata")
     
     async def _get_last_backup(
         self,
         backup_type: BackupType,
-        database_name: str = None
-    ) -> Optional[BackupMetadata]:
+        database_name: str | None = None
+    ) -> BackupMetadata | None:
         """Get the most recent backup of specified type"""
         try:
             # Get recent backups from index
@@ -568,11 +596,11 @@ class DisasterRecoveryManager:
             
             return None
             
-        except Exception as e:
-            logger.error(f"Failed to get last backup: {e}")
+        except Exception:
+            logger.exception("Failed to get last backup")
             return None
     
-    async def _get_wal_files_since(self, timestamp: datetime) -> List[str]:
+    async def _get_wal_files_since(self, timestamp: datetime) -> list[str]:
         """Get WAL files since specified timestamp"""
         # This would query PostgreSQL for WAL files
         # Implementation depends on your WAL archiving setup
@@ -582,11 +610,11 @@ class DisasterRecoveryManager:
         self,
         recovery_type: RecoveryType,
         target_timestamp: datetime,
-        database_name: str = None
+        database_name: str | None = None
     ) -> RecoveryPlan:
         """Create disaster recovery plan"""
         
-        recovery_id = f"recovery-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}"
+        recovery_id = f"recovery-{datetime.now(UTC).replace(tzinfo=None).strftime('%Y%m%d-%H%M%S')}"
         
         try:
             # Find required backups
@@ -595,7 +623,7 @@ class DisasterRecoveryManager:
             )
             
             if not source_backups:
-                raise Exception("No suitable backups found for recovery")
+                raise RuntimeError("No suitable backups found for recovery")
             
             # Estimate recovery time
             estimated_duration = await self._estimate_recovery_duration(
@@ -624,15 +652,15 @@ class DisasterRecoveryManager:
             logger.info(f"Created recovery plan: {recovery_id}")
             return plan
             
-        except Exception as e:
-            logger.error(f"Failed to create recovery plan: {e}")
+        except Exception:
+            logger.exception("Failed to create recovery plan")
             raise
     
     async def _find_recovery_backups(
         self,
         target_timestamp: datetime,
-        database_name: str = None
-    ) -> List[BackupMetadata]:
+        database_name: str | None = None
+    ) -> list[BackupMetadata]:
         """Find backups required for recovery to target timestamp"""
         
         backups = []
@@ -673,7 +701,7 @@ class DisasterRecoveryManager:
                         break
         
         if not full_backup:
-            raise Exception("No full backup found before target timestamp")
+            raise RuntimeError("No full backup found before target timestamp")
         
         backups.append(full_backup)
         
@@ -714,7 +742,7 @@ class DisasterRecoveryManager:
     async def _estimate_recovery_duration(
         self,
         recovery_type: RecoveryType,
-        backups: List[BackupMetadata]
+        backups: list[BackupMetadata]
     ) -> int:
         """Estimate recovery duration in seconds"""
         
@@ -735,9 +763,9 @@ class DisasterRecoveryManager:
     async def _generate_recovery_steps(
         self,
         recovery_type: RecoveryType,
-        backups: List[BackupMetadata],
+        backups: list[BackupMetadata],
         target_timestamp: datetime
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate detailed recovery steps"""
         
         steps = []
@@ -828,8 +856,8 @@ class DisasterRecoveryManager:
                 json.dumps(plan_dict)
             )
             
-        except Exception as e:
-            logger.error(f"Failed to store recovery plan: {e}")
+        except Exception:
+            logger.exception("Failed to store recovery plan")
     
     async def _initialize_backup_schedules(self):
         """Initialize automated backup schedules"""
@@ -862,8 +890,8 @@ class DisasterRecoveryManager:
                 # Create full backup
                 await self.create_database_backup(BackupType.FULL)
                 
-            except Exception as e:
-                logger.error(f"Scheduled full backup failed: {e}")
+            except Exception:
+                logger.exception("Scheduled full backup failed")
                 await asyncio.sleep(3600)  # Wait 1 hour before retry
     
     async def _schedule_incremental_backups(self):
@@ -873,8 +901,8 @@ class DisasterRecoveryManager:
                 await asyncio.sleep(4 * 3600)  # 4 hours
                 await self.create_database_backup(BackupType.INCREMENTAL)
                 
-            except Exception as e:
-                logger.error(f"Scheduled incremental backup failed: {e}")
+            except Exception:
+                logger.exception("Scheduled incremental backup failed")
                 await asyncio.sleep(1800)  # Wait 30 minutes before retry
     
     async def _schedule_transaction_log_backups(self):
@@ -884,8 +912,8 @@ class DisasterRecoveryManager:
                 await asyncio.sleep(15 * 60)  # 15 minutes
                 await self.create_database_backup(BackupType.TRANSACTION_LOG)
                 
-            except Exception as e:
-                logger.error(f"Scheduled transaction log backup failed: {e}")
+            except Exception:
+                logger.exception("Scheduled transaction log backup failed")
                 await asyncio.sleep(300)  # Wait 5 minutes before retry
 
 

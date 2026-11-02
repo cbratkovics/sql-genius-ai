@@ -1,13 +1,14 @@
+import logging
+import time
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-import time
-import logging
+
+from backend.api import auth, demo, users
 from backend.core.config import settings
 from backend.core.database import create_tables
-from backend.api import auth, users, demo
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ async def add_process_time_header(request: Request, call_next):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    logger.error("Unhandled exception: %s", exc, exc_info=(type(exc), exc, exc.__traceback__))
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}

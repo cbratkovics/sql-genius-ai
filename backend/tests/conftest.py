@@ -1,7 +1,7 @@
-import asyncio
 import uuid
 
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
@@ -9,63 +9,48 @@ from backend.core.database import get_db
 from backend.core.security import create_access_token, get_password_hash
 from backend.main import app
 from backend.models.base import Base
-from backend.models.tenant import Tenant, TenantPlan
+from backend.models.tenant import Tenant, TenantPlan, TenantStatus
 from backend.models.user import User, UserRole
-
-# Test database URL (SQLite in memory)
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-
-# Create test engine
-test_engine = create_async_engine(
-    TEST_DATABASE_URL,
-    echo=False,
-    pool_pre_ping=True
-)
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an event loop for the test session"""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+from backend.services.email import email_service
 
 
-@pytest.fixture(scope="session")
-async def setup_database():
-    """Set up test database"""
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+@pytest_asyncio.fixture
+async def db_session():
+    """Each test owns a fresh in-memory database, including application commits."""
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    async with AsyncSession(engine, expire_on_commit=False) as session:
+        yield session
+    await engine.dispose()
 
 
-@pytest.fixture
-async def db_session(setup_database):
-    """Create an isolated session even when application code commits."""
-    async with test_engine.connect() as connection:
-        transaction = await connection.begin()
-        async with AsyncSession(
-            bind=connection,
-            expire_on_commit=False,
-            join_transaction_mode="create_savepoint",
-        ) as session:
-            yield session
-        await transaction.rollback()
-
-
-@pytest.fixture
-def override_get_db(db_session):
-    """Override the get_db dependency"""
-    async def _override_get_db():
+@pytest_asyncio.fixture
+async def override_get_db(db_session):
+    async def test_db():
         yield db_session
-    
-    app.dependency_overrides[get_db] = _override_get_db
-    yield
-    app.dependency_overrides.clear()
+
+    app.dependency_overrides[get_db] = test_db
+    try:
+        yield
+    finally:
+        app.dependency_overrides.clear()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
+def mail_outbox(monkeypatch):
+    """Replace actual mail delivery and retain messages for behavior assertions."""
+    messages = []
+
+    async def deliver(to_email, subject, html_content, text_content=None):
+        messages.append({"to_email": to_email, "subject": subject, "html": html_content})
+        return True
+
+    monkeypatch.setattr(email_service, "send_email", deliver)
+    return messages
+
+
+@pytest_asyncio.fixture
 async def test_tenant(db_session):
     """Create a test tenant"""
     tenant = Tenant(
@@ -75,7 +60,7 @@ async def test_tenant(db_session):
         contact_email="admin@test.com",
         company_name="Test Company Inc.",
         plan=TenantPlan.PRO,
-        status="active"
+        status=TenantStatus.ACTIVE
     )
     db_session.add(tenant)
     await db_session.commit()
@@ -83,7 +68,7 @@ async def test_tenant(db_session):
     return tenant
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_user(db_session, test_tenant):
     """Create a test user"""
     user = User(
@@ -103,7 +88,7 @@ async def test_user(db_session, test_tenant):
     return user
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_admin_user(db_session, test_tenant):
     """Create a test admin user"""
     user = User(
@@ -135,7 +120,7 @@ def admin_token(test_admin_user):
     return create_access_token(subject=test_admin_user.id)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client(override_get_db):
     """Create test client"""
     async with AsyncClient(app=app, base_url="http://test") as ac:

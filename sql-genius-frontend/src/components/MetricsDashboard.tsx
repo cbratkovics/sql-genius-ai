@@ -7,11 +7,10 @@ export default function MetricsDashboard() {
         <h1 className="text-3xl font-bold mb-4">Evidence, not activity estimates</h1>
         <p className="text-gray-200 mb-6">
           The previous dashboard used randomly generated traffic, success, and latency values. Those values were
-          not observations, so they have been removed. The playground now reports only provider round-trip timing
-          returned by the current request and local execution status attached to the displayed SQL.
+          not observations, so they have been removed. The static playground reports local generation provenance and execution status attached to the displayed SQL.
         </p>
         <div className="space-y-3 text-sm text-gray-300">
-          <p><strong className="text-white">Implemented:</strong> deterministic sample schemas, curated SQLite queries, optional provider generation, and a read-only execution policy.</p>
+          <p><strong className="text-white">Implemented:</strong> deterministic sample schemas, curated SQLite queries, reviewed local query matching, and a read-only execution policy.</p>
           <p><strong className="text-white">Evaluated:</strong> focused contract and policy tests documented in the repository evidence file.</p>
           <p><strong className="text-white">Not measured:</strong> model accuracy, adoption, uptime, cost savings, or hosted performance.</p>
         </div>

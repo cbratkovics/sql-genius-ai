@@ -1,7 +1,18 @@
-from sqlalchemy import Column, String, Boolean, Integer, DateTime, JSON, Enum
-from sqlalchemy.orm import relationship
-from backend.models.base import Base, TimestampMixin, UUIDMixin, TenantMixin
+from __future__ import annotations
+
 import enum
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
+
+from sqlalchemy import JSON, Boolean, DateTime, Enum, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from backend.models.base import Base, TenantMixin, TimestampMixin, UUIDMixin
+
+if TYPE_CHECKING:
+    from backend.models.audit import APIKey, AuditLog
+    from backend.models.query import Query, SavedQuery
+    from backend.models.tenant import Tenant
 
 
 class UserRole(str, enum.Enum):
@@ -14,52 +25,52 @@ class UserRole(str, enum.Enum):
 class User(Base, UUIDMixin, TimestampMixin, TenantMixin):
     __tablename__ = "users"
     
-    email = Column(String, unique=True, index=True, nullable=False)
-    username = Column(String, unique=True, index=True, nullable=False)
-    full_name = Column(String, nullable=True)
-    hashed_password = Column(String, nullable=False)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    username: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    full_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     
-    is_active = Column(Boolean, default=True)
-    is_verified = Column(Boolean, default=False)
-    is_superuser = Column(Boolean, default=False)
-    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.USER, nullable=False)
     
     # Profile information
-    avatar_url = Column(String, nullable=True)
-    phone_number = Column(String, nullable=True)
-    department = Column(String, nullable=True)
-    job_title = Column(String, nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    phone_number: Mapped[str | None] = mapped_column(String, nullable=True)
+    department: Mapped[str | None] = mapped_column(String, nullable=True)
+    job_title: Mapped[str | None] = mapped_column(String, nullable=True)
     
     # Authentication
-    last_login_at = Column(DateTime(timezone=True), nullable=True)
-    last_login_ip = Column(String, nullable=True)
-    failed_login_attempts = Column(Integer, default=0)
-    locked_until = Column(DateTime(timezone=True), nullable=True)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_login_ip: Mapped[str | None] = mapped_column(String, nullable=True)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     
     # Preferences
-    preferences = Column(JSON, default=dict)
-    timezone = Column(String, default="UTC")
-    language = Column(String, default="en")
+    preferences: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=True)
+    timezone: Mapped[str] = mapped_column(String, default="UTC", nullable=True)
+    language: Mapped[str] = mapped_column(String, default="en", nullable=True)
     
     # API access
-    api_key_hash = Column(String, nullable=True)
-    api_key_created_at = Column(DateTime(timezone=True), nullable=True)
+    api_key_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    api_key_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     
     # Relationships
-    tenant = relationship("Tenant", back_populates="users")
-    queries = relationship("Query", back_populates="user", cascade="all, delete-orphan")
-    saved_queries = relationship("SavedQuery", back_populates="user", cascade="all, delete-orphan")
+    tenant: Mapped[Tenant | None] = relationship("Tenant", back_populates="users")
+    queries: Mapped[list[Query]] = relationship("Query", back_populates="user", cascade="all, delete-orphan")
+    saved_queries: Mapped[list[SavedQuery]] = relationship("SavedQuery", back_populates="user", cascade="all, delete-orphan")
     # dashboards = relationship("Dashboard", back_populates="user", cascade="all, delete-orphan")  # Model doesn't exist yet
-    api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
-    audit_logs = relationship("AuditLog", back_populates="user")
+    api_keys: Mapped[list[APIKey]] = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
+    audit_logs: Mapped[list[AuditLog]] = relationship("AuditLog", back_populates="user")
     
     # Usage tracking
-    total_queries = Column(Integer, default=0)
-    queries_this_month = Column(Integer, default=0)
-    last_query_at = Column(DateTime(timezone=True), nullable=True)
+    total_queries: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    queries_this_month: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    last_query_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     
     # Permissions cache
-    permissions = Column(JSON, default=list)
+    permissions: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=True)
     
     def can_access_tenant(self, tenant_id: str) -> bool:
         return self.is_superuser or self.tenant_id == tenant_id
@@ -67,7 +78,7 @@ class User(Base, UUIDMixin, TimestampMixin, TenantMixin):
     def has_permission(self, permission: str) -> bool:
         if self.is_superuser:
             return True
-        return permission in self.permissions
+        return permission in (self.permissions or [])
     
     def is_tenant_admin(self) -> bool:
         return self.role in [UserRole.SUPER_ADMIN, UserRole.TENANT_ADMIN]
