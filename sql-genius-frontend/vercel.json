@@ -27,5 +27,5 @@
     }
   ],
   "buildCommand": "npm run build",
-  "outputDirectory": "out"
+  "outputDirectory": ".next"
 }

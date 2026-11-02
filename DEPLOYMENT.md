@@ -13,10 +13,15 @@ Preserve the GitHub repository `cbratkovics/sql-genius-ai`, its established URL,
 | Node | 22.x (package engines and CI both target major 22) |
 | Install | `npm ci` |
 | Build | `npm run build` |
-| Output directory | `out` |
+| Vercel Output Directory | `.next` (Next.js build manifests; explicit in `vercel.json`) |
+| Static files published | `out/` (selected by the adapter from the successful export metadata) |
 | Runtime functions | None for this demo |
 | Required environment variables | None |
 | Rewrite/API proxy | None |
+
+Vercel's Next.js adapter uses its Output Directory setting to locate Next build manifests, **not** as a direct static-file publish path. Keep the Next.js framework preset and `.next` setting (matching the default Next `distDir`). The adapter reads `.next/routes-manifest.json` and the successful `.next/export-detail.json`, then publishes the exported `out/` files. Pointing the adapter at `out` produces the missing `out/routes-manifest.json` error because that directory contains exported HTML/assets, not Next build manifests. Do not copy manifests into `out`, change `distDir`, or remove `output: 'export'` to address this error. See the [official adapter implementation](https://github.com/vercel/vercel/blob/main/packages/next/src/index.ts).
+
+Confirm the existing project's framework preset remains **Next.js** and its Output Directory resolves to **`.next`**, as declared by `vercel.json`; remove any conflicting override selecting `out`. Other static hosts and `npm run preview` still serve **`out/`** directly. Local validation of the export and manifest paths is separate from a successful Vercel build; inspect the next non-production preview before claiming the hosted failure is resolved.
 
 Review/remove legacy **project-level** rewrite/proxy overrides and disable Analytics/Speed Insights or other injected runtime scripts. Remove obsolete frontend provider/API variables from this project's build configuration only after checking their scope; do not revoke shared credentials. Clear build overrides that bypass `prebuild`, which prepares matching SQLite WASM. Keep the current project/domain assignment so the existing URL remains stable.
 

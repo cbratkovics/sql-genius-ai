@@ -53,7 +53,7 @@ The build emits `sql-genius-frontend/out/` including `/`, `/demo/`, `/metrics/`,
 
 For browser acceptance, after building run `npx playwright install chromium` and `npm run test:static`. A system Chromium can be selected with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium`. The tests reject cross-origin/API runtime requests before page load, exercise all maintained routes, execute actual fixture queries, and verify core operations offline. Request evidence is attached in `test-results/static-results.json`.
 
-The initial deployment target is the **existing Vercel project and URL**, with root directory `sql-genius-frontend`, build command `npm run build`, and output directory `out`. Keep its existing repository and domain association. Review Hobby eligibility and usage limits. No alternative backend/database, account creation, GitHub Pages configuration, or deployment is part of this change. See [DEPLOYMENT.md](DEPLOYMENT.md) for rollout and Render retirement.
+The initial deployment target is the **existing Vercel project and URL**, using the Next.js framework preset, root directory `sql-genius-frontend`, build command `npm run build`, and Vercel Output Directory `.next`. The adapter reads Next build manifests there and publishes the static `out/` export. Keep its existing repository and domain association. Review Hobby eligibility and usage limits. No alternative backend/database, account creation, GitHub Pages configuration, or deployment is part of this change. See [DEPLOYMENT.md](DEPLOYMENT.md) for rollout and Render retirement.
 
 ## Legacy optional generation backend
 
